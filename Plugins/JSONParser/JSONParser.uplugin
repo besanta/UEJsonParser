@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "JSONParser",
+	"Description": "Helpers to manage JSON datas",
+	"Category": "Other",
+	"CreatedBy": "Santamaria Nicoals",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Type": "Developer",
+			"LoadingPhase": "Default"
+		}
+	]
+}
