@@ -221,10 +221,13 @@ UJsonFieldData * UJsonFieldData::SetTranform(const FString & key, FTransform val
 
 UJsonFieldData * UJsonFieldData::SetClass(const FString & key, UClass* value)
 {
-	check(nullptr != value);
-	
-	FString className = FStringClassReference(value).ToString();
-	Data->SetStringField(*key, *className);
+	if (nullptr != value) {
+		FString className = FStringClassReference(value).ToString();
+		Data->SetStringField(*key, *className);
+	}
+	else {
+		UE_LOG(LogJson, Error, TEXT("Set an empty Class value"));
+	}
 	return this;
 }
 
