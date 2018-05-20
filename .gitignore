@@ -1,0 +1,5 @@
+Intermediate/
+.vs/
+*.pdb
+UEJSONParser.VC.db
+UEJSONParser.VC.VC.opendb
