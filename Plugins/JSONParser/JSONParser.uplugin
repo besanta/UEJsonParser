@@ -15,6 +15,7 @@
 	"Installed": false,
 	"Modules": [
 		{
+			"Name": "JSONParser",
 			"Type": "Developer",
 			"LoadingPhase": "Default"
 		}
