@@ -1,7 +1,15 @@
 // Copyright 1998-2013 Epic Games, Inc. All Rights Reserved.
 // Copyright 1998-2016 Bright Night Games, Inc. All Rights Reserved.
 #pragma once
-#include "Json.h"
+//#include "Json.h"
+
+#include "Serialization/JsonTypes.h"
+#include "Dom/JsonValue.h"
+#include "Dom/JsonObject.h"
+
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonWriter.h"
+
 #include "JsonFieldData.generated.h"
 
 UCLASS(BlueprintType, Blueprintable)
