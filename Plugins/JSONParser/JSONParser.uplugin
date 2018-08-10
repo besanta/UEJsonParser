@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "JSONParser",
-	"Description": "Helpers to manage JSON datas",
+	"Description": "Helpers to manage JSON datas with blueprint",
 	"Category": "Other",
 	"CreatedBy": "Santamaria Nicoals",
 	"CreatedByURL": "",
@@ -17,7 +17,7 @@
 	"Modules": [
 		{
 			"Name": "JSONParser",
-			"Type": "Developer",
+			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
 	]
