@@ -8,20 +8,20 @@ public class JSONParser : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
-		PublicIncludePaths.AddRange(
-			new string[] {
-				"JSONParser/Public"
-				// ... add public include paths required here ...
-			}
-			);
+		//PublicIncludePaths.AddRange(
+		//	new string[] {
+		//		"JSONParser/Public"
+		//		// ... add public include paths required here ...
+		//	}
+		//	);
 				
 		
-		PrivateIncludePaths.AddRange(
-			new string[] {
-				"JSONParser/Private",
-				// ... add other private include paths required here ...
-			}
-			);
+		//PrivateIncludePaths.AddRange(
+		//	new string[] {
+		//		"JSONParser/Private",
+		//		// ... add other private include paths required here ...
+		//	}
+		//	);
 			
 		
 		PublicDependencyModuleNames.AddRange(
