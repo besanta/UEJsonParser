@@ -9,6 +9,10 @@
 
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonWriter.h"
+#include "Serialization/JsonSerializer.h"
+
+#include "Engine/World.h"
+#include "Engine/Engine.h"
 
 #include "JsonFieldData.generated.h"
 
