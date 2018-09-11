@@ -12,9 +12,9 @@ Easy way to read, create and manipulate JSON in Blueprints.
 * Include C++ Source for C++ Projects.
 
 # TODO
-Save JSON to File and read JSON from File.
-Encode ANY UStruct (LinearColor, SlateFont, ...)
-Encode Public properties of your Objects (With AddUObjectField, AddActorField) recusively.
+* Save JSON to File and read JSON from File.
+* Encode ANY UStruct (LinearColor, SlateFont, ...)
+* Encode Public properties of your Objects (With AddUObjectField, AddActorField) recusively.
 
 # Documentation
 To serialize datas to JSON
