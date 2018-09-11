@@ -2,6 +2,11 @@
 // Copyright 1998-2016 Bright Night Games, Inc. All Rights Reserved.
 #include "JsonFieldData.h"
 
+USerializableInterface::USerializableInterface(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+}
+
 //////////////////////////////////////////////////////////////////////////
 // UJsonFieldData
 
@@ -179,6 +184,36 @@ UJsonFieldData * UJsonFieldData::SetVectorArray(const FString & key, const TArra
 		dataArray->Add(MakeShareable(new FJsonValueNumber(value.X)));
 		dataArray->Add(MakeShareable(new FJsonValueNumber(value.Y)));
 		dataArray->Add(MakeShareable(new FJsonValueNumber(value.Z)));
+		FakeArray->SetArrayField(FString::FromInt(i), *dataArray);
+	}
+
+	Data->SetObjectField(*key, FakeArray);
+
+	return this;
+}
+
+UJsonFieldData * UJsonFieldData::SetColor(const FString & key, FColor value)
+{
+	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.R)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.G)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.B)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.A)));
+	Data->SetArrayField(*key, *dataArray);
+	return this;
+}
+
+UJsonFieldData * UJsonFieldData::SetColorArray(const FString & key, const TArray<FColor>& arrayData)
+{
+	TSharedPtr<FJsonObject> FakeArray = MakeShareable(new FJsonObject());
+	for (int i = 0; i < arrayData.Num(); i++)
+	{
+		FColor value = arrayData[i];
+		TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+		dataArray->Add(MakeShareable(new FJsonValueNumber(value.R)));
+		dataArray->Add(MakeShareable(new FJsonValueNumber(value.G)));
+		dataArray->Add(MakeShareable(new FJsonValueNumber(value.B)));
+		dataArray->Add(MakeShareable(new FJsonValueNumber(value.A)));
 		FakeArray->SetArrayField(FString::FromInt(i), *dataArray);
 	}
 
@@ -653,8 +688,64 @@ TArray<FVector> UJsonFieldData::GetVectorArray(const FString & key) const
 			OutVectorArray.Add(iVector);
 		}
 	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
 
 	return OutVectorArray;
+}
+
+FColor UJsonFieldData::GetColor(const FString & key) const
+{
+	FColor outVector;
+	// Try to get the array field from the post data
+	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
+	if (Data->TryGetArrayField(*key, arrayPtr)) {
+		// Iterate through the array and use the string value from all the entries
+		if (arrayPtr->Num() == 3) {
+			outVector.R = ((*arrayPtr)[0]->AsNumber());
+			outVector.G = ((*arrayPtr)[1]->AsNumber());
+			outVector.B = ((*arrayPtr)[2]->AsNumber());
+			outVector.A = 1.0;
+		}
+		else if (arrayPtr->Num() == 4) {
+			outVector.R = ((*arrayPtr)[0]->AsNumber());
+			outVector.G = ((*arrayPtr)[1]->AsNumber());
+			outVector.B = ((*arrayPtr)[2]->AsNumber());
+			outVector.A = ((*arrayPtr)[3]->AsNumber());
+		}
+		else {
+			UE_LOG(LogJson, Error, TEXT("Entry '%s' is not a Color!"), *key);
+		}
+	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+
+	return outVector;
+}
+
+TArray<FColor> UJsonFieldData::GetColorArray(const FString & key) const
+{
+	TArray<FColor> OutColorArray;
+	const TSharedPtr<FJsonObject> * ArrayObject;
+	if (Data->TryGetObjectField(*key, ArrayObject))
+	{
+		for (auto iKey = (*ArrayObject)->Values.CreateConstIterator(); iKey; ++iKey)
+		{
+			const TSharedPtr<FJsonValue> JsonValue = iKey.Value();
+			const FColor iColor = CreateColorFromJsonValue(JsonValue);
+			OutColorArray.Add(iColor);
+		}
+	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+
+	return OutColorArray;
 }
 
 FRotator UJsonFieldData::GetRotator(const FString & key) const

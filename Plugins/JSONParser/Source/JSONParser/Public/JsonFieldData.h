@@ -3,6 +3,8 @@
 #pragma once
 //#include "Json.h"
 
+#include "UObject/Interface.h"
+
 #include "Serialization/JsonTypes.h"
 #include "Dom/JsonValue.h"
 #include "Dom/JsonObject.h"
@@ -15,6 +17,24 @@
 #include "Engine/Engine.h"
 
 #include "JsonFieldData.generated.h"
+
+UINTERFACE(Blueprintable)
+class USerializableInterface : public UInterface
+{
+	GENERATED_UINTERFACE_BODY()
+};
+
+class ISerializableInterface
+{
+	GENERATED_IINTERFACE_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "JSON")
+	UJsonFieldData* Serialize(UJsonFieldData* data);
+
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "JSON")
+	bool Unserialize(UJsonFieldData* data);
+};
 
 UCLASS(BlueprintType, Blueprintable)
 class UJsonFieldData : public UObject
@@ -107,6 +127,14 @@ public:
 	/* Adds Vector array data to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Vector Array Field"), Category = "JSON")
 	UJsonFieldData* SetVectorArray(const FString& key, const TArray<FVector>& arrayData);
+
+	/* Adds Color data to the post data */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Color Field"), Category = "JSON")
+	UJsonFieldData* SetColor(const FString& key, FColor value);
+
+	/* Adds Vector array data to the post data */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Color Array Field"), Category = "JSON")
+	UJsonFieldData* SetColorArray(const FString& key, const TArray<FColor>& arrayData);
 
 	/* Adds Rotator data to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Rotator Field"), Category = "JSON")
@@ -208,6 +236,14 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Vector Array Field"), Category = "JSON")
 	TArray<FVector> GetVectorArray(const FString& key) const;
 
+	/* Gets Color data from the post data */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Color Field"), Category = "JSON")
+	FColor GetColor(const FString& key) const;
+
+	/* Gets Vector data from the post data */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Color Array Field"), Category = "JSON")
+	TArray<FColor> GetColorArray(const FString& key) const;
+
 	/* Gets Rotator data from the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Rotator Field"), Category = "JSON")
 	FRotator GetRotator(const FString& key) const;
@@ -266,5 +302,26 @@ public:
 		OutVector.Y = JsonArray[1]->AsNumber();
 		OutVector.Z = JsonArray[2]->AsNumber();
 		return OutVector;
+	}
+
+	FORCEINLINE static FColor CreateColorFromJsonValue(const TSharedPtr<FJsonValue>& InJson)
+	{
+		check(InJson.IsValid());
+		FColor outColor;
+		TArray<TSharedPtr<FJsonValue>> JsonArray = InJson->AsArray();
+		if (JsonArray.Num() == 3) {
+			outColor.R = JsonArray[0]->AsNumber();
+			outColor.G = JsonArray[1]->AsNumber();
+			outColor.B = JsonArray[2]->AsNumber();
+			outColor.A = 1.0;
+		}
+		else if (JsonArray.Num() == 4) {
+			outColor.R = JsonArray[0]->AsNumber();
+			outColor.G = JsonArray[1]->AsNumber();
+			outColor.B = JsonArray[2]->AsNumber();
+			outColor.A = JsonArray[3]->AsNumber();
+		}
+		
+		return outColor;
 	}
 };
