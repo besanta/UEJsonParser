@@ -18,10 +18,10 @@ Encode Public properties of your Objects (With AddUObjectField, AddActorField) r
 
 # Documentation
 To serialize datas to JSON
-![Alt serialize](docs/serialize.png?raw=true "Serialize")
+![Alt serialize](Docs/serialize.png?raw=true "Serialize")
 
 To unserialize datas from JSON
-![Alt unserialize](docs/unserialize?raw=true "Unserialize")
+![Alt unserialize](Docs/unserialize?raw=true "Unserialize")
 
 # Support
 nicosanta@brightnightgames.net
