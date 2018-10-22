@@ -19,7 +19,11 @@ UJsonFieldData::UJsonFieldData(const class FObjectInitializer& PCIP)
 	Reset();
 }
 
-
+/**
+* Serialize the JSON to a String
+*
+* @return	A string representation of the json content
+*/
 FString UJsonFieldData::GetContentString()
 {
 	FString outStr;
@@ -32,6 +36,13 @@ FString UJsonFieldData::GetContentString()
 	return outStr;
 }
 
+/**
+* Serialize the JSON to a compressed format
+* 
+* @param	Compressed	An array to store the result
+* @param	bIsValid	The status of the compression
+*
+*/
  void UJsonFieldData::GetContentCompressed(TArray<uint8>& Compressed, bool& bIsValid)
 {
 	FString UncompressedData = GetContentString();
@@ -150,6 +161,278 @@ UJsonFieldData* UJsonFieldData::SetObject(const FString& key, const UJsonFieldDa
 	return this;
 }
 
+TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObject(const UObject * InObject, const void * InStructData)
+{
+	check(InObject);
+	UClass* ObjectClass = InObject->GetClass();
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+
+	for (UProperty* Property = ObjectClass->PropertyLink; Property; Property = Property->PropertyLinkNext)
+	{
+		if (!Property->HasAllPropertyFlags(
+			EPropertyFlags::CPF_SaveGame
+		)) continue;
+
+		const FString PropertyName = Property->GetFName().ToString();
+		WriteProperty(JsonObject.Get(), Property, InObject);
+	}
+	
+	FString className = FStringClassReference(ObjectClass).ToString();
+	JsonObject->SetStringField("__internal__ContainerClass", *className);
+
+	return JsonObject;
+}
+
+TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const UStruct* InStruct, const void* InStructData) {
+	
+	check(InStruct);
+	TSharedPtr<FJsonObject> JsonStruct = MakeShareable(new FJsonObject());
+	for (TFieldIterator<UProperty> It(InStruct); It; ++It)
+	{
+		UProperty* BaseProp = *It;
+		check(BaseProp);
+
+		TSharedPtr<FJsonValue> ParsedPropertyValue;
+		const void* Data = BaseProp->ContainerPtrToValuePtr<void>(InStructData, 0);
+		const FString PropertyName = BaseProp->GetFName().ToString();
+		WriteProperty(JsonStruct.Get(), BaseProp, Data);
+	}
+	return JsonStruct;
+}
+
+bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData)
+{
+	const FString Identifier = InProperty->GetFName().ToString();
+
+	/*if (const UEnumProperty* EnumProp = Cast<const UEnumProperty>(InProperty))
+	{
+		const FString PropertyValue = DataTableUtils::GetPropertyValueAsString(EnumProp, (uint8*)InRowData, DTExportFlags);
+		JsonWriter->WriteValue(Identifier, PropertyValue);
+	}
+	else */
+	if (const UNumericProperty *NumProp = Cast<const UNumericProperty>(InProperty))
+	{
+		/*if (NumProp->IsEnum())
+		{
+			const FString PropertyValue = DataTableUtils::GetPropertyValueAsString(InProperty, (uint8*)InRowData, DTExportFlags);
+			JsonWriter->WriteValue(Identifier, PropertyValue);
+		}
+		else*/
+		if (auto ByteProperty = Cast<const UByteProperty>(InProperty))
+		{
+			const int8 PropertyValue = ByteProperty->GetPropertyValue(ByteProperty->ContainerPtrToValuePtr<int8>(InPropertyData));
+
+			//const int64 PropertyValue = NumProp->GetSignedIntPropertyValue(InPropertyData);
+			JsonWriter->SetNumberField(Identifier, PropertyValue);
+		}
+		else if (auto Int8Property = Cast<const UInt8Property>(InProperty))
+		{
+			const int8 PropertyValue = Int8Property->GetPropertyValue(Int8Property->ContainerPtrToValuePtr<int8>(InPropertyData));
+
+			//const int64 PropertyValue = NumProp->GetSignedIntPropertyValue(InPropertyData);
+			JsonWriter->SetNumberField(Identifier, PropertyValue);
+		}
+		else if (auto Int16Property = Cast<const UInt8Property>(InProperty))
+		{
+			const int16 PropertyValue = Int16Property->GetPropertyValue(Int16Property->ContainerPtrToValuePtr<int16>(InPropertyData));
+			//const double PropertyValue = NumProp->GetFloatingPointPropertyValue(InPropertyData);
+			JsonWriter->SetNumberField(Identifier, PropertyValue);
+		}
+		else if (auto IntProperty = Cast<const UIntProperty>(InProperty))
+		{
+			const int PropertyValue = IntProperty->GetPropertyValue(IntProperty->ContainerPtrToValuePtr<int>(InPropertyData));
+			JsonWriter->SetNumberField(Identifier, PropertyValue);
+		}
+		else if (auto Int64Property = Cast<const UInt64Property>(InProperty))
+		{
+			const int64 PropertyValue = Int64Property->GetPropertyValue(Int64Property->ContainerPtrToValuePtr<int64>(InPropertyData));
+			JsonWriter->SetNumberField(Identifier, PropertyValue);
+		}
+		else if(auto floatProperty = Cast<const UFloatProperty>(InProperty))
+		{
+			const float PropertyValue = floatProperty->GetPropertyValue(floatProperty->ContainerPtrToValuePtr<float>(InPropertyData));
+			//const double PropertyValue = NumProp->GetFloatingPointPropertyValue(InPropertyData);
+			JsonWriter->SetNumberField(Identifier, PropertyValue);
+		}
+	}
+	else if (const UBoolProperty* BoolProp = Cast<const UBoolProperty>(InProperty))
+	{
+		const bool PropertyValue = BoolProp->GetPropertyValue(InPropertyData);
+		JsonWriter->SetBoolField(Identifier, PropertyValue);
+	}
+	//else if (const UArrayProperty* ArrayProp = Cast<const UArrayProperty>(InProperty))
+	//{
+	//	JsonWriter->WriteArrayStart(Identifier);
+
+	//	FScriptArrayHelper ArrayHelper(ArrayProp, InPropertyData);
+	//	for (int32 ArrayEntryIndex = 0; ArrayEntryIndex < ArrayHelper.Num(); ++ArrayEntryIndex)
+	//	{
+	//		const uint8* ArrayEntryData = ArrayHelper.GetRawPtr(ArrayEntryIndex);
+	//		WriteContainerEntry(ArrayProp->Inner, ArrayEntryData);
+	//	}
+
+	//	JsonWriter->WriteArrayEnd();
+	//}
+	//else if (const USetProperty* SetProp = Cast<const USetProperty>(InProperty))
+	//{
+	//	JsonWriter->WriteArrayStart(Identifier);
+
+	//	FScriptSetHelper SetHelper(SetProp, InPropertyData);
+	//	for (int32 SetSparseIndex = 0; SetSparseIndex < SetHelper.GetMaxIndex(); ++SetSparseIndex)
+	//	{
+	//		if (SetHelper.IsValidIndex(SetSparseIndex))
+	//		{
+	//			const uint8* SetEntryData = SetHelper.GetElementPtr(SetSparseIndex);
+	//			WriteContainerEntry(SetHelper.GetElementProperty(), SetEntryData);
+	//		}
+	//	}
+
+	//	JsonWriter->WriteArrayEnd();
+	//}
+	//else if (const UMapProperty* MapProp = Cast<const UMapProperty>(InProperty))
+	//{
+	//	JsonWriter->WriteObjectStart(Identifier);
+
+	//	FScriptMapHelper MapHelper(MapProp, InPropertyData);
+	//	for (int32 MapSparseIndex = 0; MapSparseIndex < MapHelper.GetMaxIndex(); ++MapSparseIndex)
+	//	{
+	//		if (MapHelper.IsValidIndex(MapSparseIndex))
+	//		{
+	//			const uint8* MapKeyData = MapHelper.GetKeyPtr(MapSparseIndex);
+	//			const uint8* MapValueData = MapHelper.GetValuePtr(MapSparseIndex);
+
+	//			// JSON object keys must always be strings
+	//			const FString KeyValue = DataTableUtils::GetPropertyValueAsStringDirect(MapHelper.GetKeyProperty(), (uint8*)MapKeyData, DTExportFlags);
+	//			WriteContainerEntry(MapHelper.GetValueProperty(), MapValueData, &KeyValue);
+	//		}
+	//	}
+
+	//	JsonWriter->WriteObjectEnd();
+	//}
+	else if (const UStructProperty* StructProp = Cast<const UStructProperty>(InProperty))
+	{
+		TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp->Struct, StructProp);
+		JsonWriter->SetObjectField(Identifier, JsonStruct);
+	}
+	else if (auto objectProperty = Cast<UObjectProperty>(InProperty))
+	{
+		//const void* Data = objectProperty->ContainerPtrToValuePtr<void>(InPropertyData, 0);
+		UObject* Value = objectProperty->GetPropertyValue(objectProperty->ContainerPtrToValuePtr<UObject>(InPropertyData));
+		if (Value)
+		{
+			TSharedPtr<FJsonObject> JsonValue = CreateJsonValueFromUObject(Value, InPropertyData);
+			JsonWriter->SetObjectField(Identifier, JsonValue);
+		}
+	}
+	else
+	{
+		auto StrProperty = Cast<UStrProperty>(InProperty);
+		auto Value = StrProperty->GetPropertyValue(StrProperty->ContainerPtrToValuePtr<FString>(InPropertyData));
+		JsonWriter->SetField(Identifier, MakeShareable(new FJsonValueString(Value)));
+	}
+
+	return true;
+}
+
+/**
+* Adds the supplied UObject to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				UObject
+*
+* @return	The object itself
+*/
+UJsonFieldData* UJsonFieldData::SetUObject(const FString& key, const UObject* Container)
+{
+
+	if (!Container) {
+		UE_LOG(LogJson, Error, TEXT("NULL Object Reference for %s"), *key);
+		return this;
+	}
+	UClass* ObjectClass = Container->GetClass();
+
+	//TSharedPtr<FJsonObject> JsonObject = CreateJsonValueFromUObject(Container, Container);
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+
+	
+	
+	for (UProperty* Property = ObjectClass->PropertyLink; Property; Property = Property->PropertyLinkNext)
+	{
+		//TOTO Use > bool UProperty::ShouldSerializeValue( FArchive& Ar ) const
+		if (!Property->HasAllPropertyFlags(
+			EPropertyFlags::CPF_SaveGame
+		)) continue;
+
+		const FString PropertyName = Property->GetFName().ToString();
+
+		WriteProperty(JsonObject.Get(), Property, Container);
+
+		/*
+
+		if (auto objectProperty = Cast<UObjectProperty>(Property))
+		{
+			WriteProperty(JsonObject.Get(), Property, Container);
+
+			continue;
+			UObject* Value = objectProperty->GetPropertyValue(objectProperty->ContainerPtrToValuePtr<UObject>(Container));
+			if (Value)
+			{
+				UJsonFieldData* pageData = Create(contextObject);
+				pageData->SetUObject(PropertyName, Value);
+				JsonObject->SetObjectField(PropertyName, pageData->Data->GetObjectField(PropertyName));
+			}
+		}
+		else {
+			WriteProperty(JsonObject.Get(), Property, Container);
+		}*/
+		/*else if (Property->IsA<UIntProperty>())
+		{
+			auto intProperty = Cast<UIntProperty>(Property);
+			auto Value = intProperty->GetPropertyValue(intProperty->ContainerPtrToValuePtr<int>(Container));
+			JsonObject->SetNumberField(PropertyName, Value);
+		}
+		else if (Property->IsA<UFloatProperty>())
+		{
+			auto floatProperty = Cast<UFloatProperty>(Property);
+			auto Value = floatProperty->GetPropertyValue(floatProperty->ContainerPtrToValuePtr<float>(Container));
+			JsonObject->SetNumberField(PropertyName, Value);
+		}*/
+		//else if (Property->IsA<UBoolProperty>())
+	//	//{
+	//	//	auto boolProperty = Cast<UBoolProperty>(Property);
+	//	//	auto Value = boolProperty->GetPropertyValue(boolProperty->ContainerPtrToValuePtr<bool>(Container));
+	//	//	JsonObject->SetBoolField(propertyName, Value);
+	//	//}
+		
+	//	//else if (auto structProperty = Cast<UStructProperty>(Property))
+	//	//{
+	//	//	auto Value = CreateJsonValueFromStruct(structProperty->Struct, Container);
+	//	//	JsonObject->SetObjectField(propertyName, Value);
+	//	//}
+		/*else if (Property->IsA<UStrProperty>())
+		{
+			auto StrProperty = Cast<UStrProperty>(Property);
+			auto Value = StrProperty->GetPropertyValue(StrProperty->ContainerPtrToValuePtr<FString>(Container));
+			JsonObject->SetField(PropertyName, MakeShareable(new FJsonValueString(Value)));
+		}*/
+	}
+
+	FString className = FStringClassReference(ObjectClass).ToString();
+	JsonObject->SetStringField("__internal__ContainerClass", *className);
+
+	Data->SetObjectField(*key, JsonObject);
+
+	return this;
+}
+
+/**
+* Adds the supplied vector to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Vector
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetVector(const FString & key, FVector value)
 {
 	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
@@ -160,6 +443,14 @@ UJsonFieldData * UJsonFieldData::SetVector(const FString & key, FVector value)
 	return this;
 }
 
+/**
+* Adds the supplied vector array to the post data, under the given key
+*
+* @param	key					Key
+* @param	arrayData			Vector Array
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetVectorArray(const FString & key, const TArray<FVector>& arrayData)
 {
 	/*	
@@ -192,6 +483,14 @@ UJsonFieldData * UJsonFieldData::SetVectorArray(const FString & key, const TArra
 	return this;
 }
 
+/**
+* Adds the supplied Color to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Color
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetColor(const FString & key, FColor value)
 {
 	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
@@ -203,6 +502,14 @@ UJsonFieldData * UJsonFieldData::SetColor(const FString & key, FColor value)
 	return this;
 }
 
+/**
+* Adds the supplied Color Array array to the post data, under the given key
+*
+* @param	key					Key
+* @param	arrayData			Color Array
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetColorArray(const FString & key, const TArray<FColor>& arrayData)
 {
 	TSharedPtr<FJsonObject> FakeArray = MakeShareable(new FJsonObject());
@@ -222,6 +529,14 @@ UJsonFieldData * UJsonFieldData::SetColorArray(const FString & key, const TArray
 	return this;
 }
 
+/**
+* Adds the supplied Rotator to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Rotator
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetRotator(const FString & key, FRotator value)
 {
 	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
@@ -233,7 +548,15 @@ UJsonFieldData * UJsonFieldData::SetRotator(const FString & key, FRotator value)
 	return this;
 }
 
-UJsonFieldData * UJsonFieldData::SetTranform(const FString & key, FTransform value)
+/**
+* Adds the supplied Transform to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Transform
+*
+* @return	The object itself
+*/
+UJsonFieldData * UJsonFieldData::SetTransform(const FString & key, FTransform value)
 {
 	TArray<TSharedPtr<FJsonValue>> *transformArray = new TArray<TSharedPtr<FJsonValue>>();
 	
@@ -254,6 +577,14 @@ UJsonFieldData * UJsonFieldData::SetTranform(const FString & key, FTransform val
 	return this;
 }
 
+/**
+* Adds the supplied Class to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Class
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetClass(const FString & key, UClass* value)
 {
 	if (nullptr != value) {
@@ -266,6 +597,14 @@ UJsonFieldData * UJsonFieldData::SetClass(const FString & key, UClass* value)
 	return this;
 }
 
+/**
+* Adds the supplied Class array to the post data, under the given key
+*
+* @param	key					Key
+* @param	arrayData			Class Array
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetClassArray(const FString & key, const TArray<UClass*> arrayData)
 {
 	TArray<TSharedPtr<FJsonValue>> *classArray = new TArray<TSharedPtr<FJsonValue>>();
@@ -279,6 +618,8 @@ UJsonFieldData * UJsonFieldData::SetClassArray(const FString & key, const TArray
 	Data->SetArrayField(*key, *classArray);
 	return this;
 }
+
+
 
 //
 //UJsonFieldData * UJsonFieldData::SetStruct(const FString & key, const UProperty* value)
@@ -330,6 +671,14 @@ UJsonFieldData* UJsonFieldData::SetStringArray(const FString& key, const TArray<
 	return this;
 }
 
+/**
+* Adds the supplied Name to the post data, under the given key
+*
+* @param	key						Key
+* @param	value					Name
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetName(const FString & key, const FName & value)
 {
 	FString fromName = value.ToString();
@@ -337,6 +686,14 @@ UJsonFieldData * UJsonFieldData::SetName(const FString & key, const FName & valu
 	return this;
 }
 
+/**
+* Adds the supplied Name array to the post data, under the given key
+*
+* @param	key						Key
+* @param	arrayData				Array of Name
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetNameArray(const FString & key, const TArray<FName> arrayData)
 {
 	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
@@ -350,12 +707,28 @@ UJsonFieldData * UJsonFieldData::SetNameArray(const FString & key, const TArray<
 	return this;
 }
 
+/**
+* Adds the supplied Byte to the post data, under the given key
+*
+* @param	key						Key
+* @param	value					Byte
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetByte(const FString & key, uint8 value)
 {
 	Data->SetNumberField(*key, value);
 	return this;
 }
 
+/**
+* Adds the supplied Byte array to the post data, under the given key
+*
+* @param	key						Key
+* @param	arrayData				Byte of strings
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetByteArray(const FString & key, const TArray<uint8> arrayData)
 {
 	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
@@ -369,12 +742,28 @@ UJsonFieldData * UJsonFieldData::SetByteArray(const FString & key, const TArray<
 	return this;
 }
 
+/**
+* Adds the supplied bool to the post data, under the given key
+*
+* @param	key						Key
+* @param	value					Bool
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetBool(const FString & key, bool value)
 {
 	Data->SetNumberField(*key, (value ? 1 : 0));
 	return this;
 }
 
+/**
+* Adds the supplied bool array to the post data, under the given key
+*
+* @param	key						Key
+* @param	arrayData				Array of bool
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetBoolArray(const FString & key, const TArray<bool> arrayData)
 {
 	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
@@ -388,12 +777,28 @@ UJsonFieldData * UJsonFieldData::SetBoolArray(const FString & key, const TArray<
 	return this;
 }
 
+/**
+* Adds the supplied number (float) to the post data, under the given key
+*
+* @param	key						Key
+* @param	value					Float
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetNumber(const FString & key, float value)
 {
 	Data->SetNumberField(*key, value);
 	return this;
 }
 
+/**
+* Adds the supplied number (float) array to the post data, under the given key
+*
+* @param	key						Key
+* @param	arrayData				Array of float
+*
+* @return	The object itself
+*/
 UJsonFieldData * UJsonFieldData::SetNumberArray(const FString & key, const TArray<float> arrayData)
 {
 	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();

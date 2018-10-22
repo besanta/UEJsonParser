@@ -142,7 +142,7 @@ public:
 
 	/* Adds Tranform data to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Transform Field"), Category = "JSON")
-	UJsonFieldData* SetTranform(const FString& key, FTransform value);
+	UJsonFieldData* SetTransform(const FString& key, FTransform value);
 
 	/* Adds string data to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Class Field"), Category = "JSON")
@@ -153,12 +153,12 @@ public:
 	UJsonFieldData* SetClassArray(const FString& key, const TArray<UClass*> arrayData);
 
 
-	/* Adds string data to the post data */
-	//https://forums.unrealengine.com/showthread.php?56537-Tutorial-How-to-accept-wildcard-structs-in-your-UFUNCTIONs&p=206131#post206131
-	//UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Struct Field", CustomStructureParam = "value"), Category = "JSON")
-	//UJsonFieldData* SetStruct(const FString& key, const UProperty* value);
+	/* Adds UObject data to the post data */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON")
+	UJsonFieldData* SetUObject(const FString& key, const UObject* value);
 
 	// Example Blueprint function that receives any struct as input
+	//https://forums.unrealengine.com/showthread.php?56537-Tutorial-How-to-accept-wildcard-structs-in-your-UFUNCTIONs&p=206131#post206131
 	/*
 	UFUNCTION(BlueprintCallable, CustomThunk, meta = (CustomStructureParam = "AnyStruct"), Category = "JSON")
 		void SetStructProperty(UProperty* AnyStruct);
@@ -185,8 +185,6 @@ public:
 	/* Adds a new post data field to the specified data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Array Field"), Category = "JSON")
 	UJsonFieldData* SetObjectArray(const FString& key, const TArray<UJsonFieldData*> arrayData);
-
-
 
 	/* Gets string data from the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get String Field"), Category = "JSON")
@@ -280,7 +278,9 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "From Archive"), Category = "JSON")
 	UJsonFieldData* FromCompressed(const TArray<uint8>& CompressedData, bool& bIsValid);
 
-
+	static TSharedPtr<FJsonObject> CreateJsonValueFromUObject(const UObject* InObject, const void* InStructData);
+	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UStruct* InStruct, const void* InStructData);
+	static bool WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData);
 
 	FORCEINLINE static TSharedRef<FJsonValue> CreateJsonValueFromVector(const FVector& InVec) 
 	{
