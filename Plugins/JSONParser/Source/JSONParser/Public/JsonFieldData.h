@@ -279,7 +279,7 @@ public:
 	UJsonFieldData* FromCompressed(const TArray<uint8>& CompressedData, bool& bIsValid);
 
 	static TSharedPtr<FJsonObject> CreateJsonValueFromUObject(const UObject* InObject, const void* InStructData);
-	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UStruct* InStruct, const void* InStructData);
+	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UScriptStruct* InStruct, const void* InStructData);
 	static bool WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData);
 
 	FORCEINLINE static TSharedRef<FJsonValue> CreateJsonValueFromVector(const FVector& InVec) 
