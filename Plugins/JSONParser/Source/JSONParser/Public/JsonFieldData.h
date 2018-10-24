@@ -46,8 +46,6 @@ private:
 	/* Resets the current post data */
 	void Reset();
 
-
-
 	void WriteObject(TSharedRef<TJsonWriter<TCHAR>> writer, FString key, FJsonValue* value);
 public:
 	UObject* contextObject;
@@ -278,8 +276,16 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "From Archive"), Category = "JSON")
 	UJsonFieldData* FromCompressed(const TArray<uint8>& CompressedData, bool& bIsValid);
 
-	static TSharedPtr<FJsonObject> CreateJsonValueFromUObject(const UObject* InObject, const void* InStructData);
-	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UScriptStruct* InStruct, const void* InStructData);
+	static TSharedPtr<FJsonObject> CreateJsonValueFromUObjectProperty(const UObjectProperty * InObjectProperty, const void * InObjectData);
+
+	static TSharedPtr<FJsonObject> CreateJsonValueFromUObject(const UObject* InObject);
+
+	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UStructProperty* StructProperty, const void* StructPtr);
+
+	static void ParseProperty(const UProperty * Property, const void * ValuePtr);
+
+	//static void IterateThroughStructProperty(UStructProperty * StructProperty, void * StructPtr);
+
 	static bool WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData);
 
 	FORCEINLINE static TSharedRef<FJsonValue> CreateJsonValueFromVector(const FVector& InVec) 
@@ -325,3 +331,5 @@ public:
 		return outColor;
 	}
 };
+
+
