@@ -152,14 +152,14 @@ public:
 
 
 	/* Adds UObject data to the post data */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON|Experimental")
 	UJsonFieldData* SetUObject(const FString& key, const UObject* value);
 
 	// Example Blueprint function that receives any struct as input
 	//https://forums.unrealengine.com/showthread.php?56537-Tutorial-How-to-accept-wildcard-structs-in-your-UFUNCTIONs&p=206131#post206131
-	/*
-	UFUNCTION(BlueprintCallable, CustomThunk, meta = (CustomStructureParam = "AnyStruct"), Category = "JSON")
-		void SetStructProperty(UProperty* AnyStruct);
+	
+	UFUNCTION(BlueprintCallable, CustomThunk, meta = (DisplayName = "Add Struct Field", CustomStructureParam = "Struct"), Category = "JSON|Experimental")
+	UJsonFieldData* SetStructProperty(UProperty* Struct);
 
 	DECLARE_FUNCTION(execSetStructProperty)
 	{
@@ -170,15 +170,70 @@ public:
 		// This does not contains the property value, only its type information
 		UStructProperty* StructProperty = ExactCast<UStructProperty>(Stack.MostRecentProperty);
 
+
+
+		const FString Identifier = StructProperty->GetFName().ToString();
+		const UClass* classRef = StructProperty->GetClass();
+		const FString className = classRef->GetFName().ToString();
+
+		UE_LOG(LogJson, Log, TEXT("Found a %s Property named %s"), *Identifier, *className);
+
+
 		// Grab the base address where the struct actually stores its data
 		// This is where the property value is truly stored
 		void* StructPtr = Stack.MostRecentPropertyAddress;
 
 		// We need this to wrap up the stack
 		P_FINISH;
+		
+		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(Context);
+		if (StructProperty && StructPtr && LocalContext) {
+			TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProperty, StructPtr);
+			LocalContext->Data->SetObjectField("test test test", JsonStruct);
+		}
 
+		//P_GET_PROPERTY(UNameProperty, StructPropertyName);
+
+		/*Stack.StepCompiledIn<UStructProperty>(NULL);
+		void* SrcStructAddr = Stack.MostRecentPropertyAddress;
+
+
+		P_FINISH;
+		*/
+		
+		/*Stack.MostRecentPropertyAddress = nullptr;
+		Stack.MostRecentProperty = nullptr;
+
+		Stack.StepCompiledIn<UStructProperty>(NULL);
+		void* StructPtr = Stack.MostRecentPropertyAddress;
+		UStructProperty* StructProperty = ExactCast<UStructProperty>(Stack.MostRecentProperty);
+		P_FINISH;
+
+		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(Context);
+
+		UE_LOG(LogJson, Log, TEXT("%d  %d  %d"), StructProperty, StructPtr, LocalContext);
+
+
+		
+
+
+		*/
+
+		/*if (OwnerObject != NULL)
+		{
+			UStructProperty* StructProp = FindField<UStructProperty>(OwnerObject->GetClass(), StructPropertyName);
+			if (StructProp != NULL)
+			{
+				void* Dest = StructProp->ContainerPtrToValuePtr<void>(OwnerObject);
+				StructProp->CopyValuesInternal(Dest, SrcStructAddr, 1);
+			}
+		}
+*/
+		/*P_NATIVE_BEGIN;
+		P_NATIVE_END;*/
+		*(UJsonFieldData**)RESULT_PARAM = LocalContext;
 	}
-	*/
+	
 
 	/* Adds a new post data field to the specified data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Array Field"), Category = "JSON")
@@ -282,9 +337,7 @@ public:
 
 	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UStructProperty* StructProperty, const void* StructPtr);
 
-	static void ParseProperty(const UProperty * Property, const void * ValuePtr);
-
-	//static void IterateThroughStructProperty(UStructProperty * StructProperty, void * StructPtr);
+	//static void ParseProperty(const UProperty * Property, const void * ValuePtr);
 
 	static bool WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData);
 

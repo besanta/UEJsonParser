@@ -1229,7 +1229,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const UStructP
 	}
 
 
-	return JsonStruct;
+	return JsonStructstruct ;
 }
 
 bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData)
@@ -1258,7 +1258,7 @@ bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const UProperty* InP
 		{
 			//auto Data = NumericProperty->ContainerPtrToValuePtr<float>(InPropertyData);
 			double FloatValue = NumericProperty->GetFloatingPointPropertyValue(InPropertyData);
-			UE_LOG(LogJson, Log, TEXT("Float Property %s Value %s"), *Identifier, *FString::SanitizeFloat(FloatValue));
+		//	UE_LOG(LogJson, Log, TEXT("Float Property %s Value %s"), *Identifier, *FString::SanitizeFloat(FloatValue));
 
 			JsonWriter->SetNumberField(Identifier, FloatValue);
 		}
@@ -1374,72 +1374,72 @@ bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const UProperty* InP
 * @param Property    the property reflection data
 * @param ValuePtr    the pointer to the property value
 */
-void UJsonFieldData::ParseProperty(const UProperty* Property, const void* ValuePtr)
-{
-
-	float FloatValue;
-	int32 IntValue;
-	bool BoolValue;
-	FString StringValue;
-	FName NameValue;
-	FText TextValue;
-
-
-	// Here's how to read integer and float properties
-	if (const UNumericProperty *NumericProperty = Cast<const UNumericProperty>(Property))
-	{
-		if (NumericProperty->IsFloatingPoint())
-		{
-			FloatValue = NumericProperty->GetFloatingPointPropertyValue(ValuePtr);
-			UE_LOG(LogJson, Log, TEXT("Float Value in STRUCT %f"), FloatValue);
-		}
-		else if (NumericProperty->IsInteger())
-		{
-			IntValue = NumericProperty->GetSignedIntPropertyValue(ValuePtr);
-		}
-	}
-
-	// How to read booleans
-	if (const UBoolProperty* BoolProperty = Cast<const UBoolProperty>(Property))
-	{
-		BoolValue = BoolProperty->GetPropertyValue(ValuePtr);
-	}
-
-	// Reading names
-	if (const UNameProperty* NameProperty = Cast<const UNameProperty>(Property))
-	{
-		NameValue = NameProperty->GetPropertyValue(ValuePtr);
-	}
-
-	// Reading strings
-	if (const UStrProperty* StringProperty = Cast<const UStrProperty>(Property))
-	{
-		StringValue = StringProperty->GetPropertyValue(ValuePtr);
-	}
-
-	// Reading texts
-	if (const UTextProperty* TextProperty = Cast<const UTextProperty>(Property))
-	{
-		TextValue = TextProperty->GetPropertyValue(ValuePtr);
-	}
-
-	// Reading an array
-	if (const UArrayProperty* ArrayProperty = Cast<const UArrayProperty>(Property))
-	{
-		// We need the helper to get to the items of the array            
-		FScriptArrayHelper Helper(ArrayProperty, ValuePtr);
-		for (int32 i = 0, n = Helper.Num(); i < n; ++i)
-		{
-			ParseProperty(ArrayProperty->Inner, Helper.GetRawPtr(i));
-		}
-	}
-
-	// Reading a nested struct
-	if (const UStructProperty* StructProperty = Cast<const UStructProperty>(Property))
-	{
-		CreateJsonValueFromStruct(StructProperty, ValuePtr);
-	}
-}
+//void UJsonFieldData::ParseProperty(const UProperty* Property, const void* ValuePtr)
+//{
+//
+//	float FloatValue;
+//	int32 IntValue;
+//	bool BoolValue;
+//	FString StringValue;
+//	FName NameValue;
+//	FText TextValue;
+//
+//
+//	// Here's how to read integer and float properties
+//	if (const UNumericProperty *NumericProperty = Cast<const UNumericProperty>(Property))
+//	{
+//		if (NumericProperty->IsFloatingPoint())
+//		{
+//			FloatValue = NumericProperty->GetFloatingPointPropertyValue(ValuePtr);
+//			UE_LOG(LogJson, Log, TEXT("Float Value in STRUCT %f"), FloatValue);
+//		}
+//		else if (NumericProperty->IsInteger())
+//		{
+//			IntValue = NumericProperty->GetSignedIntPropertyValue(ValuePtr);
+//		}
+//	}
+//
+//	// How to read booleans
+//	if (const UBoolProperty* BoolProperty = Cast<const UBoolProperty>(Property))
+//	{
+//		BoolValue = BoolProperty->GetPropertyValue(ValuePtr);
+//	}
+//
+//	// Reading names
+//	if (const UNameProperty* NameProperty = Cast<const UNameProperty>(Property))
+//	{
+//		NameValue = NameProperty->GetPropertyValue(ValuePtr);
+//	}
+//
+//	// Reading strings
+//	if (const UStrProperty* StringProperty = Cast<const UStrProperty>(Property))
+//	{
+//		StringValue = StringProperty->GetPropertyValue(ValuePtr);
+//	}
+//
+//	// Reading texts
+//	if (const UTextProperty* TextProperty = Cast<const UTextProperty>(Property))
+//	{
+//		TextValue = TextProperty->GetPropertyValue(ValuePtr);
+//	}
+//
+//	// Reading an array
+//	if (const UArrayProperty* ArrayProperty = Cast<const UArrayProperty>(Property))
+//	{
+//		// We need the helper to get to the items of the array            
+//		FScriptArrayHelper Helper(ArrayProperty, ValuePtr);
+//		for (int32 i = 0, n = Helper.Num(); i < n; ++i)
+//		{
+//			ParseProperty(ArrayProperty->Inner, Helper.GetRawPtr(i));
+//		}
+//	}
+//
+//	// Reading a nested struct
+//	if (const UStructProperty* StructProperty = Cast<const UStructProperty>(Property))
+//	{
+//		CreateJsonValueFromStruct(StructProperty, ValuePtr);
+//	}
+//}
 /*
 * Example function for iterating through all properties of a struct
 * @param StructProperty    The struct property reflection data
