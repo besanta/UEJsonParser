@@ -2,6 +2,8 @@
 // Copyright 1998-2016 Bright Night Games, Inc. All Rights Reserved.
 #include "JsonFieldData.h"
 
+#include "Engine/UserDefinedEnum.h"
+
 USerializableInterface::USerializableInterface(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -1166,7 +1168,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObjectProperty(const
 			const void* ValuePtr = Property->ContainerPtrToValuePtr<const void>(Value, ArrayIndex);
 
 			// Parse this property
-			WriteProperty(JsonObject.Get(), Property->GetFName().ToString(), Property, ValuePtr);
+			WriteProperty(JsonObject, Property->GetFName().ToString(), Property, ValuePtr);
 		}
 	}
 
@@ -1175,6 +1177,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObjectProperty(const
 
 	return JsonObject;
 }
+
 TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObject(const UObject * InObject)
 {
 	check(InObject);
@@ -1192,7 +1195,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObject(const UObject
 			// This grabs the pointer to where the property value is stored
 			const void* ValuePtr = Property->ContainerPtrToValuePtr<const void>(InObject, ArrayIndex);
 
-			WriteProperty(JsonObject.Get(), Property->GetFName().ToString(), Property, ValuePtr);
+			WriteProperty(JsonObject, Property->GetFName().ToString(), Property, ValuePtr);
 		}
 	}
 
@@ -1224,7 +1227,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const UStructP
 
 			// Parse this property
 			//ParseProperty(Property, ValuePtr);
-			WriteProperty(JsonStruct.Get(), Property->GetFName().ToString(), Property, ValuePtr);
+			WriteProperty(JsonStruct, Property->GetFName().ToString(), Property, ValuePtr);
 		}
 	}
 
@@ -1232,103 +1235,110 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const UStructP
 	return JsonStruct;
 }
 
-bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const FString& Identifier, const UProperty* InProperty, const void* InPropertyData)
+bool UJsonFieldData::WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const UProperty* InProperty, const void* InPropertyData)
 {
 	if (!InProperty) return false;
 
-	//const FString Identifier = InProperty->GetFName().ToString();
-
-	/*if (const UEnumProperty* EnumProp = Cast<const UEnumProperty>(InProperty))
+	if (auto StructProp = Cast<const UStructProperty>(InProperty))
 	{
-		const FString PropertyValue = DataTableUtils::GetPropertyValueAsString(EnumProp, (uint8*)InRowData, DTExportFlags);
-		JsonWriter->WriteValue(Identifier, PropertyValue);
-	}
-	else */
-		
-	// Here's how to read integer and float properties
-	if (const UNumericProperty *NumericProperty = Cast<const UNumericProperty>(InProperty))
-	{
-		/*if (NumProp->IsEnum())
-		{
-			const FString PropertyValue = DataTableUtils::GetPropertyValueAsString(InProperty, (uint8*)InRowData, DTExportFlags);
-			JsonWriter->WriteValue(Identifier, PropertyValue);
-		}
-		else*/
-		if (NumericProperty->IsFloatingPoint())
-		{
-			//auto Data = NumericProperty->ContainerPtrToValuePtr<float>(InPropertyData);
-			double FloatValue = NumericProperty->GetFloatingPointPropertyValue(InPropertyData);
-		//	UE_LOG(LogJson, Log, TEXT("Float Property %s Value %s"), *Identifier, *FString::SanitizeFloat(FloatValue));
-
-			JsonWriter->SetNumberField(Identifier, FloatValue);
-		}
-		else if (NumericProperty->IsInteger())
-		{
-			//auto Data = NumericProperty->ContainerPtrToValuePtr<int>(InPropertyData);
-			int64 IntValue = NumericProperty->GetSignedIntPropertyValue(InPropertyData);
-			JsonWriter->SetNumberField(Identifier, IntValue);
-		}
-	}
-	else if (auto StrProperty = Cast<UStrProperty>(InProperty))
-	{
-		//auto Value = StrProperty->GetPropertyValue(StrProperty->ContainerPtrToValuePtr<FString>(InPropertyData));
-		auto Value = StrProperty->GetPropertyValue(InPropertyData);
-		JsonWriter->SetField(Identifier, MakeShareable(new FJsonValueString(Value)));
-	}
-	else if (const UClassProperty* ClassProp = Cast<const UClassProperty>(InProperty))
-	{
-		//auto Data = ClassProp->ContainerPtrToValuePtr<UObject>(InPropertyData);
-		UObject* PropertyValue = ClassProp->GetPropertyValue(InPropertyData);
-		if (PropertyValue)
-		{
-			FString className = FStringClassReference(PropertyValue->GetClass()).ToString();
-			JsonWriter->SetStringField(Identifier, *className);
-		}
-	}
-	else if (const UBoolProperty* BoolProp = Cast<const UBoolProperty>(InProperty))
-	{
-		//auto Data = BoolProp->ContainerPtrToValuePtr<bool>(InPropertyData);
-		const int PropertyValue = BoolProp->GetPropertyValue(InPropertyData) ? 1 : 0;
-		JsonWriter->SetNumberField(Identifier, PropertyValue);
-	}
-	else if (auto StructProp = Cast<const UStructProperty>(InProperty))
-	{
-		//const void* Data = StructProp->ContainerPtrToValuePtr<void>(StructProp->Struct, 0);
-		//const UStruct* PropertyValue = StructProp->GetPropertyValue(StructProp->ContainerPtrToValuePtr<const UStruct>(InPropertyData));
-
-		//BEST =
-		//const UStruct* PropertyValue = StructProp->ContainerPtrToValuePtr<const UStruct>(InPropertyData, 0);
 		TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp, InPropertyData);
-		//TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(PropertyValue, Data);
-
 		JsonWriter->SetObjectField(Identifier, JsonStruct);
 	}
 	else if (auto objectProperty = Cast<UObjectProperty>(InProperty))
 	{
-		//const void* Data = objectProperty->ContainerPtrToValuePtr<void>(InPropertyData, 0);
-		//const UObject* PropertyValue = objectProperty->GetPropertyValue(objectProperty->ContainerPtrToValuePtr<const UObject>(InPropertyData));
-		
-		//const UObject* PropertyValue = objectProperty->GetObjectPropertyValue(InPropertyData);
 		TSharedPtr<FJsonObject> JsonValue = CreateJsonValueFromUObjectProperty(objectProperty, InPropertyData);
 		JsonWriter->SetObjectField(Identifier, JsonValue);
-
-		//FString className = FStringClassReference(Value->GetClass()).ToString();
-		//JsonWriter->SetStringField("__internal__ContainerClass", *className);
 	}
-	/*else if (const UArrayProperty* ArrayProp = Cast<const UArrayProperty>(InProperty))
+	else {
+		JsonWriter->SetField(Identifier, GetJsonValue(InProperty, InPropertyData));
+	}
+	
+
+	return true;
+}
+
+TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const UProperty * InProperty, const void * InPropertyData)
+{
+	if (const UEnumProperty* EnumProperty = Cast<const UEnumProperty>(InProperty))
 	{
-		JsonWriter->WriteArrayStart(Identifier);
+		UEnum* Enum = EnumProperty->GetEnum();
+		int64 Val = EnumProperty->GetUnderlyingProperty()->GetSignedIntPropertyValue(InPropertyData);
+		if (UUserDefinedEnum* UDEnum = Cast<UUserDefinedEnum>(Enum))
+		{
+			FString NiceName = UDEnum->GetDisplayNameTextByValue(Val).ToString();
+			return MakeShareable(new FJsonValueString(NiceName));
+		}
+		return MakeShareable(new FJsonValueNumber(Val));
+	}
+	else if (const UStrProperty* StrProperty = Cast<UStrProperty>(InProperty))
+	{
+		auto Value = StrProperty->GetPropertyValue(InPropertyData);
+		return MakeShareable(new FJsonValueString(Value));
+	}
+	else if (const UNumericProperty *NumericProperty = Cast<const UNumericProperty>(InProperty))
+	{
+		//if (NumericProperty->IsEnum())
+		if (const UByteProperty* ByteProperty = Cast<const UByteProperty>(InProperty))
+		{
+			int64 Val = ByteProperty->GetSignedIntPropertyValue(InPropertyData);
+			if (UUserDefinedEnum* UDEnum = Cast<UUserDefinedEnum>(ByteProperty->Enum))
+			{
+				FString NiceName = UDEnum->GetDisplayNameTextByValue(Val).ToString();
+				return MakeShareable(new FJsonValueString(NiceName));
+			}
+			return MakeShareable(new FJsonValueNumber(Val));
+		}
+		else if (NumericProperty->IsFloatingPoint())
+		{
+			double FloatValue = NumericProperty->GetFloatingPointPropertyValue(InPropertyData);
+			return MakeShareable(new FJsonValueNumber(FloatValue));
+		}
+		else if (NumericProperty->IsInteger())
+		{
+			int64 IntValue = NumericProperty->GetSignedIntPropertyValue(InPropertyData);
+			return MakeShareable(new FJsonValueNumber(IntValue));
+		}
+	}
+	else if (const UBoolProperty* BoolProp = Cast<const UBoolProperty>(InProperty))
+	{
+		const int PropertyValue = BoolProp->GetPropertyValue(InPropertyData) ? 1 : 0;
+		return MakeShareable(new FJsonValueNumber(PropertyValue));
+	}
+	else if (const UClassProperty* ClassProp = Cast<const UClassProperty>(InProperty))
+	{
+		UObject* PropertyValue = ClassProp->GetPropertyValue(InPropertyData);
+		if (PropertyValue)
+		{
+			FString className = FStringClassReference(PropertyValue->GetClass()).ToString();
+			return MakeShareable(new FJsonValueString(className));
+		}
+	}
+	else if (const UArrayProperty* ArrayProp = Cast<const UArrayProperty>(InProperty))
+	{
+		TArray< TSharedPtr<FJsonValue> > ValueArray;
 
 		FScriptArrayHelper ArrayHelper(ArrayProp, InPropertyData);
 		for (int32 ArrayEntryIndex = 0; ArrayEntryIndex < ArrayHelper.Num(); ++ArrayEntryIndex)
 		{
 			const uint8* ArrayEntryData = ArrayHelper.GetRawPtr(ArrayEntryIndex);
-			WriteContainerEntry(ArrayProp->Inner, ArrayEntryData);
-		}
+			TSharedPtr<FJsonValue> jval = GetJsonValue(ArrayProp->Inner, ArrayEntryData);
 
-		JsonWriter->WriteArrayEnd();
+			ValueArray.Add(jval);
+		}
+		return MakeShareable(new FJsonValueArray(ValueArray));
 	}
-	else if (const USetProperty* SetProp = Cast<const USetProperty>(InProperty))
+	//else if (auto StructProp = Cast<const UStructProperty>(InProperty))
+	//{
+	//	TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp, InPropertyData);
+	//	return MakeShareable(new FJsonValueObject(JsonStruct));
+	//}
+	//else if (auto objectProperty = Cast<UObjectProperty>(InProperty))
+	//{
+	//	TSharedPtr<FJsonObject> JsonObject = CreateJsonValueFromUObjectProperty(objectProperty, InPropertyData);
+	//	return MakeShareable(new FJsonValueObject(JsonObject));
+	//}
+
+	/*else if (const USetProperty* SetProp = Cast<const USetProperty>(InProperty))
 	{
 		JsonWriter->WriteArrayStart(Identifier);
 
@@ -1343,10 +1353,10 @@ bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const FString& Ident
 		}
 
 		JsonWriter->WriteArrayEnd();
-	}
+	}*/
 	else if (const UMapProperty* MapProp = Cast<const UMapProperty>(InProperty))
 	{
-		JsonWriter->WriteObjectStart(Identifier);
+		TSharedPtr<FJsonObject> JsonMapObject = MakeShareable(new FJsonObject());
 
 		FScriptMapHelper MapHelper(MapProp, InPropertyData);
 		for (int32 MapSparseIndex = 0; MapSparseIndex < MapHelper.GetMaxIndex(); ++MapSparseIndex)
@@ -1357,114 +1367,16 @@ bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const FString& Ident
 				const uint8* MapValueData = MapHelper.GetValuePtr(MapSparseIndex);
 
 				// JSON object keys must always be strings
-				const FString KeyValue = DataTableUtils::GetPropertyValueAsStringDirect(MapHelper.GetKeyProperty(), (uint8*)MapKeyData, DTExportFlags);
-				WriteContainerEntry(MapHelper.GetValueProperty(), MapValueData, &KeyValue);
+				//const FString KeyValue = DataTableUtils::GetPropertyValueAsStringDirect(MapHelper.GetKeyProperty(), (uint8*)MapKeyData, DTExportFlags);
+				//WriteContainerEntry(MapHelper.GetValueProperty(), MapValueData, &KeyValue);
+				const FString KeyValue = MapHelper.GetKeyProperty()->GetFName().ToString();
+				WriteProperty(JsonMapObject, KeyValue, MapHelper.GetValueProperty(), MapValueData);
 			}
 		}
 
-		JsonWriter->WriteObjectEnd();
-	}*/
+		return MakeShareable(new FJsonValueObject(JsonMapObject));
+	}
 
 
-	return true;
+	return MakeShareable(new FJsonValueNull());
 }
-
-
-/* Example function for parsing a single property
-* @param Property    the property reflection data
-* @param ValuePtr    the pointer to the property value
-*/
-//void UJsonFieldData::ParseProperty(const UProperty* Property, const void* ValuePtr)
-//{
-//
-//	float FloatValue;
-//	int32 IntValue;
-//	bool BoolValue;
-//	FString StringValue;
-//	FName NameValue;
-//	FText TextValue;
-//
-//
-//	// Here's how to read integer and float properties
-//	if (const UNumericProperty *NumericProperty = Cast<const UNumericProperty>(Property))
-//	{
-//		if (NumericProperty->IsFloatingPoint())
-//		{
-//			FloatValue = NumericProperty->GetFloatingPointPropertyValue(ValuePtr);
-//			UE_LOG(LogJson, Log, TEXT("Float Value in STRUCT %f"), FloatValue);
-//		}
-//		else if (NumericProperty->IsInteger())
-//		{
-//			IntValue = NumericProperty->GetSignedIntPropertyValue(ValuePtr);
-//		}
-//	}
-//
-//	// How to read booleans
-//	if (const UBoolProperty* BoolProperty = Cast<const UBoolProperty>(Property))
-//	{
-//		BoolValue = BoolProperty->GetPropertyValue(ValuePtr);
-//	}
-//
-//	// Reading names
-//	if (const UNameProperty* NameProperty = Cast<const UNameProperty>(Property))
-//	{
-//		NameValue = NameProperty->GetPropertyValue(ValuePtr);
-//	}
-//
-//	// Reading strings
-//	if (const UStrProperty* StringProperty = Cast<const UStrProperty>(Property))
-//	{
-//		StringValue = StringProperty->GetPropertyValue(ValuePtr);
-//	}
-//
-//	// Reading texts
-//	if (const UTextProperty* TextProperty = Cast<const UTextProperty>(Property))
-//	{
-//		TextValue = TextProperty->GetPropertyValue(ValuePtr);
-//	}
-//
-//	// Reading an array
-//	if (const UArrayProperty* ArrayProperty = Cast<const UArrayProperty>(Property))
-//	{
-//		// We need the helper to get to the items of the array            
-//		FScriptArrayHelper Helper(ArrayProperty, ValuePtr);
-//		for (int32 i = 0, n = Helper.Num(); i < n; ++i)
-//		{
-//			ParseProperty(ArrayProperty->Inner, Helper.GetRawPtr(i));
-//		}
-//	}
-//
-//	// Reading a nested struct
-//	if (const UStructProperty* StructProperty = Cast<const UStructProperty>(Property))
-//	{
-//		CreateJsonValueFromStruct(StructProperty, ValuePtr);
-//	}
-//}
-/*
-* Example function for iterating through all properties of a struct
-* @param StructProperty    The struct property reflection data
-* @param StructPtr        The pointer to the struct value
-*/
-//void UJsonFieldData::IterateThroughStructProperty(UStructProperty* StructProperty, void* StructPtr)
-//{
-//	// Walk the structs' properties
-//	UScriptStruct* Struct = StructProperty->Struct;
-//	for (TFieldIterator<UProperty> It(Struct); It; ++It)
-//	{
-//		UProperty* Property = *It;
-//
-//		// This is the variable name if you need it
-//		FString VariableName = Property->GetName();
-//
-//		// Never assume ArrayDim is always 1
-//		for (int32 ArrayIndex = 0; ArrayIndex < Property->ArrayDim; ArrayIndex++)
-//		{
-//			// This grabs the pointer to where the property value is stored
-//			void* ValuePtr = Property->ContainerPtrToValuePtr<void>(StructPtr, ArrayIndex);
-//
-//			// Parse this property
-//			ParseProperty(Property, ValuePtr);
-//		}
-//	}
-//}
-
