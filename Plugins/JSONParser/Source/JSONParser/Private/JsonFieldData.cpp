@@ -1166,7 +1166,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObjectProperty(const
 			const void* ValuePtr = Property->ContainerPtrToValuePtr<const void>(Value, ArrayIndex);
 
 			// Parse this property
-			WriteProperty(JsonObject.Get(), Property, ValuePtr);
+			WriteProperty(JsonObject.Get(), Property->GetFName().ToString(), Property, ValuePtr);
 		}
 	}
 
@@ -1192,7 +1192,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObject(const UObject
 			// This grabs the pointer to where the property value is stored
 			const void* ValuePtr = Property->ContainerPtrToValuePtr<const void>(InObject, ArrayIndex);
 
-			WriteProperty(JsonObject.Get(), Property, ValuePtr);
+			WriteProperty(JsonObject.Get(), Property->GetFName().ToString(), Property, ValuePtr);
 		}
 	}
 
@@ -1224,19 +1224,19 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const UStructP
 
 			// Parse this property
 			//ParseProperty(Property, ValuePtr);
-			WriteProperty(JsonStruct.Get(), Property, ValuePtr);
+			WriteProperty(JsonStruct.Get(), Property->GetFName().ToString(), Property, ValuePtr);
 		}
 	}
 
 
-	return JsonStructstruct ;
+	return JsonStruct;
 }
 
-bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData)
+bool UJsonFieldData::WriteProperty(FJsonObject* JsonWriter, const FString& Identifier, const UProperty* InProperty, const void* InPropertyData)
 {
 	if (!InProperty) return false;
 
-	const FString Identifier = InProperty->GetFName().ToString();
+	//const FString Identifier = InProperty->GetFName().ToString();
 
 	/*if (const UEnumProperty* EnumProp = Cast<const UEnumProperty>(InProperty))
 	{

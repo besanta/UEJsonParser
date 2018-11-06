@@ -157,80 +157,35 @@ public:
 
 	// Example Blueprint function that receives any struct as input
 	//https://forums.unrealengine.com/showthread.php?56537-Tutorial-How-to-accept-wildcard-structs-in-your-UFUNCTIONs&p=206131#post206131
-	
-	UFUNCTION(BlueprintCallable, CustomThunk, meta = (DisplayName = "Add Struct Field", CustomStructureParam = "Struct"), Category = "JSON|Experimental")
-	UJsonFieldData* SetStructProperty(UProperty* Struct);
+	UFUNCTION(BlueprintPure, CustomThunk, meta = (DisplayName = "Add Any Field", CustomStructureParam = "Value"), Category = "JSON|Experimental")
+	UJsonFieldData* SetAnyProperty(const FString& Key, UProperty* Value);
 
-	DECLARE_FUNCTION(execSetStructProperty)
+	DECLARE_FUNCTION(execSetAnyProperty)
 	{
-		// Steps into the stack, walking to the next property in it
-		Stack.Step(Stack.Object, NULL);
-
-		// Grab the last property found when we walked the stack
-		// This does not contains the property value, only its type information
-		UStructProperty* StructProperty = ExactCast<UStructProperty>(Stack.MostRecentProperty);
-
-
-
-		const FString Identifier = StructProperty->GetFName().ToString();
-		const UClass* classRef = StructProperty->GetClass();
-		const FString className = classRef->GetFName().ToString();
-
-		UE_LOG(LogJson, Log, TEXT("Found a %s Property named %s"), *Identifier, *className);
-
-
-		// Grab the base address where the struct actually stores its data
-		// This is where the property value is truly stored
-		void* StructPtr = Stack.MostRecentPropertyAddress;
-
-		// We need this to wrap up the stack
-		P_FINISH;
-		
-		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(Context);
-		if (StructProperty && StructPtr && LocalContext) {
-			TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProperty, StructPtr);
-			LocalContext->Data->SetObjectField("test test test", JsonStruct);
-		}
-
-		//P_GET_PROPERTY(UNameProperty, StructPropertyName);
-
-		/*Stack.StepCompiledIn<UStructProperty>(NULL);
-		void* SrcStructAddr = Stack.MostRecentPropertyAddress;
-
+		P_GET_PROPERTY(UStrProperty, Key);
+		Stack.MostRecentProperty = NULL;
+		Stack.MostRecentPropertyAddress = NULL;
+		Stack.StepCompiledIn<UProperty>(NULL);
+		void* DataPtr = Stack.MostRecentPropertyAddress;
 
 		P_FINISH;
-		*/
 		
-		/*Stack.MostRecentPropertyAddress = nullptr;
-		Stack.MostRecentProperty = nullptr;
+		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(P_THIS_OBJECT);
 
-		Stack.StepCompiledIn<UStructProperty>(NULL);
-		void* StructPtr = Stack.MostRecentPropertyAddress;
-		UStructProperty* StructProperty = ExactCast<UStructProperty>(Stack.MostRecentProperty);
-		P_FINISH;
-
-		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(Context);
-
-		UE_LOG(LogJson, Log, TEXT("%d  %d  %d"), StructProperty, StructPtr, LocalContext);
-
-
-		
-
-
-		*/
-
-		/*if (OwnerObject != NULL)
-		{
-			UStructProperty* StructProp = FindField<UStructProperty>(OwnerObject->GetClass(), StructPropertyName);
-			if (StructProp != NULL)
-			{
-				void* Dest = StructProp->ContainerPtrToValuePtr<void>(OwnerObject);
-				StructProp->CopyValuesInternal(Dest, SrcStructAddr, 1);
+		if (LocalContext) {
+			if (const UStructProperty* StructProperty = ExactCast<UStructProperty>(Stack.MostRecentProperty)) {
+				TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProperty, DataPtr);
+				LocalContext->Data->SetObjectField(Key, JsonStruct);
+			}
+			else if (const UObjectProperty* ObjectProperty = ExactCast<UObjectProperty>(Stack.MostRecentProperty)) {
+				TSharedPtr<FJsonObject> JsonObject = CreateJsonValueFromUObjectProperty(ObjectProperty, DataPtr);
+				LocalContext->Data->SetObjectField(Key, JsonObject);
+			}
+			else {
+				WriteProperty(LocalContext->Data.Get(), Key, Stack.MostRecentProperty, DataPtr);
 			}
 		}
-*/
-		/*P_NATIVE_BEGIN;
-		P_NATIVE_END;*/
+
 		*(UJsonFieldData**)RESULT_PARAM = LocalContext;
 	}
 	
@@ -339,7 +294,7 @@ public:
 
 	//static void ParseProperty(const UProperty * Property, const void * ValuePtr);
 
-	static bool WriteProperty(FJsonObject* JsonWriter, const UProperty* InProperty, const void* InPropertyData);
+	static bool WriteProperty(FJsonObject* JsonWriter, const FString& Identifier, const UProperty* InProperty, const void* InPropertyData);
 
 	FORCEINLINE static TSharedRef<FJsonValue> CreateJsonValueFromVector(const FVector& InVec) 
 	{
