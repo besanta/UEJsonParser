@@ -1124,7 +1124,7 @@ UJsonFieldData * UJsonFieldData::FromCompressed(const TArray<uint8>& CompressedD
 }
 
 
-UObject* UJsonFieldData::GetUObjectField(const FString & Key, UObject* Context)
+UObject* UJsonFieldData::GetUObjectField(const FString & Key, UObject* Context, bool& Success)
 {
 	check(Context);
 
@@ -1142,6 +1142,7 @@ UObject* UJsonFieldData::GetUObjectField(const FString & Key, UObject* Context)
 			SetJsonValue(Value, FoundProperty, PropertyData);
 		}
 	}
+	Success = true;
 
 	return Context;
 }
@@ -1365,7 +1366,7 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const UProperty * InPropert
 				const uint8* MapKeyData = MapHelper.GetKeyPtr(MapSparseIndex);
 				const uint8* MapValueData = MapHelper.GetValuePtr(MapSparseIndex);
 
-				// JSON object keys must always be strings
+				// JSON object keySuces must always be strings
 				//const FString KeyValue = DataTableUtils::GetPropertyValueAsStringDirect(MapHelper.GetKeyProperty(), (uint8*)MapKeyData, DTExportFlags);
 				//WriteContainerEntry(MapHelper.GetValueProperty(), MapValueData, &KeyValue);
 				const FString KeyValue = MapHelper.GetKeyProperty()->GetFName().ToString();
@@ -1388,17 +1389,16 @@ bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const UProperty 
 	if (const UNumericProperty *NumericProperty = Cast<const UNumericProperty>(Property))
 	{
 		//if (NumericProperty->IsEnum())
-		/*if (const UByteProperty* ByteProperty = Cast<const UByteProperty>(FoundProperty))
+		if (const UByteProperty* ByteProperty = Cast<const UByteProperty>(Property))
 		{
-			int64 Val = ByteProperty->GetSignedIntPropertyValue(InPropertyData);
 			if (UUserDefinedEnum* UDEnum = Cast<UUserDefinedEnum>(ByteProperty->Enum))
 			{
-				FString NiceName = UDEnum->GetDisplayNameTextByValue(Val).ToString();
-				return MakeShareable(new FJsonValueString(NiceName));
+				const FString EnumStringValue = Value->AsString();
+				int64 EnumIndexValue = UDEnum->GetIndexByNameString(EnumStringValue);
+				ByteProperty->SetIntPropertyValue(PropertyData, EnumIndexValue);
 			}
-			return MakeShareable(new FJsonValueNumber(Val));
 		}
-		else*/ if (NumericProperty->IsFloatingPoint())
+		else if (NumericProperty->IsFloatingPoint())
 		{
 			NumericProperty->SetFloatingPointPropertyValue(PropertyData, Value->AsNumber());
 			//UE_LOG(LogJson, Log, TEXT("Try unserial property %s with value %f"), *ValueKey, Value);
@@ -1409,7 +1409,7 @@ bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const UProperty 
 			//UE_LOG(LogJson, Log, TEXT("Try unserial property %s value %d"), *ValueKey, Value);
 		}
 	}
-	else if (auto StructProp = Cast<const UStructProperty>(Property))
+	else if (const UStructProperty* StructProp = Cast<const UStructProperty>(Property))
 	{
 		UStruct* Struct = StructProp->Struct;
 
@@ -1417,16 +1417,50 @@ bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const UProperty 
 
 		for (auto currJsonValue = JsonStruct->Values.CreateConstIterator(); currJsonValue; ++currJsonValue) {
 			
-			TSharedPtr<FJsonValue> StructValue = (*currJsonValue).Value;
-			const FString ValueKey = (*currJsonValue).Key;
+			TSharedPtr<FJsonValue> JStructValue = (*currJsonValue).Value;
+			const FString JValueKey = (*currJsonValue).Key;
 
 			//UProperty* FoundProperty = FindField<UProperty>(Struct->GetClass(), *ValueKey);
-			UProperty* FoundProperty = Struct->FindPropertyByName(*ValueKey);
+			UProperty* FoundProperty = Struct->FindPropertyByName(*JValueKey);
 
 			if (FoundProperty)
 			{
 				void* FoundPropertyData = FoundProperty->ContainerPtrToValuePtr<uint8>(PropertyData);
-				SetJsonValue(StructValue, FoundProperty, FoundPropertyData);
+				SetJsonValue(JStructValue, FoundProperty, FoundPropertyData);
+			}
+			else 
+			{
+				UE_LOG(LogJson, Warning, TEXT("Missign Property %s in Struct %s."), *JValueKey, *(StructProp->GetFName().ToString()));
+			}
+		}
+	}
+	else if (const UObjectProperty* ObjectProperty = Cast<const UObjectProperty>(Property))
+	{
+		TSharedPtr<FJsonObject> JsonObject = Value->AsObject();
+
+		UObject* TargetObject = ObjectProperty->GetObjectPropertyValue(PropertyData);
+
+		if (!TargetObject) 
+		{
+			return false;
+		}
+
+		for (auto currJsonValue = JsonObject->Values.CreateConstIterator(); currJsonValue; ++currJsonValue) {
+
+			TSharedPtr<FJsonValue> JObjectValue = (*currJsonValue).Value;
+			const FString JValueKey = (*currJsonValue).Key;
+
+			UProperty* FoundProperty = FindField<UProperty>(TargetObject->GetClass(), *JValueKey);
+			//UProperty* FoundProperty = Struct->FindPropertyByName(*ValueKey);
+
+			if (FoundProperty)
+			{
+				void* FoundPropertyData = FoundProperty->ContainerPtrToValuePtr<uint8>(PropertyData);
+				SetJsonValue(JObjectValue, FoundProperty, FoundPropertyData);
+			}
+			else
+			{
+				UE_LOG(LogJson, Warning, TEXT("Missign Property %s in Object %s"), *JValueKey, *(ObjectProperty->GetFName().ToString()));
 			}
 		}
 	}

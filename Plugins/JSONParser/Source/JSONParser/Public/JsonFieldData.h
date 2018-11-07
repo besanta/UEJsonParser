@@ -286,7 +286,7 @@ public:
 	}
 
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get UObject Field"), Category = "JSON|Experimental")
-	UObject* GetUObjectField(const FString& Key, UObject* Context);
+	UObject* GetUObjectField(const FString& Key, UObject* Context, bool& Success);
 
 private:
 	static TSharedPtr<FJsonObject> CreateJsonValueFromUObjectProperty(const UObjectProperty * InObjectProperty, const void * InObjectData);
