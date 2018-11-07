@@ -160,35 +160,6 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Class Array Field"), Category = "JSON")
 	UJsonFieldData* SetClassArray(const FString& key, const TArray<UClass*> arrayData);
 
-
-	/* Adds UObject data to the post data */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON|Experimental")
-	UJsonFieldData* SetUObject(const FString& key, const UObject* value);
-
-	/* Adds Any data to the post data */
-	UFUNCTION(BlueprintPure, CustomThunk, meta = (DisplayName = "Add Any Field", CustomStructureParam = "Value"), Category = "JSON|Experimental")
-	UJsonFieldData* SetAnyProperty(const FString& Key, UProperty* Value);
-
-	DECLARE_FUNCTION(execSetAnyProperty)
-	{
-		//https://forums.unrealengine.com/showthread.php?56537-Tutorial-How-to-accept-wildcard-structs-in-your-UFUNCTIONs&p=206131#post206131
-		P_GET_PROPERTY(UStrProperty, Key);
-		Stack.MostRecentProperty = NULL;
-		Stack.MostRecentPropertyAddress = NULL;
-		Stack.StepCompiledIn<UProperty>(NULL);
-		UProperty* Property = Stack.MostRecentProperty;
-		void* DataPtr = Stack.MostRecentPropertyAddress;
-		P_FINISH;
-		
-		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(P_THIS_OBJECT);
-		if (LocalContext) {
-			WriteProperty(LocalContext->Data, Key, Property, DataPtr);
-		}
-
-		*(UJsonFieldData**)RESULT_PARAM = LocalContext;
-	}
-	
-
 	/* Adds a new post data field to the specified data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Array Field"), Category = "JSON")
 	UJsonFieldData* SetObjectArray(const FString& key, const TArray<UJsonFieldData*> arrayData);
@@ -285,6 +256,39 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "From Archive"), Category = "JSON")
 	UJsonFieldData* FromCompressed(const TArray<uint8>& CompressedData, bool& bIsValid);
 
+
+
+	/* Adds UObject data to the post data */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON|Experimental")
+	UJsonFieldData* SetUObject(const FString& key, const UObject* value);
+
+	/* Adds Any data to the post data */
+	UFUNCTION(BlueprintPure, CustomThunk, meta = (DisplayName = "Add Any Field", CustomStructureParam = "Value"), Category = "JSON|Experimental")
+	UJsonFieldData* SetAnyProperty(const FString& Key, UProperty* Value);
+
+	DECLARE_FUNCTION(execSetAnyProperty)
+	{
+		//https://forums.unrealengine.com/showthread.php?56537-Tutorial-How-to-accept-wildcard-structs-in-your-UFUNCTIONs&p=206131#post206131
+		P_GET_PROPERTY(UStrProperty, Key);
+		Stack.MostRecentProperty = NULL;
+		Stack.MostRecentPropertyAddress = NULL;
+		Stack.StepCompiledIn<UProperty>(NULL);
+		UProperty* Property = Stack.MostRecentProperty;
+		void* DataPtr = Stack.MostRecentPropertyAddress;
+		P_FINISH;
+
+		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(P_THIS_OBJECT);
+		if (LocalContext) {
+			WriteProperty(LocalContext->Data, Key, Property, DataPtr);
+		}
+
+		*(UJsonFieldData**)RESULT_PARAM = LocalContext;
+	}
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get UObject Field"), Category = "JSON|Experimental")
+	UObject* GetUObjectField(const FString& Key, UObject* Context);
+
+private:
 	static TSharedPtr<FJsonObject> CreateJsonValueFromUObjectProperty(const UObjectProperty * InObjectProperty, const void * InObjectData);
 
 	static TSharedPtr<FJsonObject> CreateJsonValueFromUObject(const UObject* InObject);
@@ -292,6 +296,7 @@ public:
 	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UStructProperty* StructProperty, const void* StructPtr);
 
 	static TSharedPtr<FJsonValue> GetJsonValue(const UProperty * InProperty, const void * InPropertyData);
+	static bool SetJsonValue(TSharedPtr<FJsonValue> Value, const UProperty* Property, void* PropertyData);
 
 	static bool WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const UProperty* InProperty, const void* InPropertyData);
 
