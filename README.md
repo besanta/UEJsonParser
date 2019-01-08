@@ -31,4 +31,5 @@ You can locate it in the extended option of your variable.\
 nicosanta@brightnightgames.net
 
 # License
-This is an open source project, you can use it freely. If you think this project useful, please give me a star to let me know it is useful, so I'll continue make it better.
+This is an open source project, you can use it freely. 
+If you think this project is useful, please give me a star to let me know, so I continue to make it better.
