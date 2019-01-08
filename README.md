@@ -23,7 +23,7 @@ To serialize datas to JSON
 To unserialize datas from JSON
 ![unserialize](Docs/unserialize.png?raw=true "Unserialize")
 
-SaveGameFlag
+To successfully use AddUObjectField on your UObjects, you have to flag the relevant variables with the SaveGameFlag, you found it int the extended option of your variable.
 ![Alt savegame](Docs/savegamevariableproperty.png?raw=true "SaveGame")
 
 # Support
