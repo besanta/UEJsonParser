@@ -5,7 +5,7 @@
 	"FriendlyName": "JSONParser",
 	"Description": "Helpers to manage JSON datas with blueprint",
 	"Category": "Other",
-	"CreatedBy": "Santamaria Nicoals",
+	"CreatedBy": "Santamaria Nicolas",
 	"CreatedByURL": "",
 	"DocsURL": "",
 	"MarketplaceURL": "",
@@ -18,7 +18,7 @@
 		{
 			"Name": "JSONParser",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostConfigInit"
 		}
 	]
 }
