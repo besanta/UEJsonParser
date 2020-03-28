@@ -7,7 +7,7 @@ Easy way to read, create and manipulate JSON in Blueprints.
 * Handle JSON structured string
 * Easy to use. No C++ coding required, everything can be managed via blueprints.
 * Supported Types: Bool, String, Name, Byte, Number(float), Vector, Color, Rotator, Transform, Class and arrays of these types.
-* Encode ANY with AddAnyField (LinearColor, SlateFont, Custom Blueprint Struct ... also works with UObject and every other property type btw...). Only encode, no decoding atm.
+* Encode ANY with AddAnyField (LinearColor, SlateFont, Custom Blueprint Struct ... also works with UObject and every other Property type...). Only encode, no decoding.
 * Encode properties of your UObjects (With AddUObjectField) recusively if they are flagged with SaveGame. 
 * Compress JSON string (Archive). Read form archived JSON string.
 * Provide SerializableInterface to help in your code design.
@@ -17,6 +17,9 @@ Easy way to read, create and manipulate JSON in Blueprints.
 * Save JSON to File and read JSON from File.
 
 # Documentation
+Simple example
+![Alt serialize](Docs/simple.png?raw=true "Serialize")
+
 To serialize datas to JSON
 ![Alt serialize](Docs/serialize.png?raw=true "Serialize")
 
