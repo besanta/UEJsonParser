@@ -12,13 +12,9 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHO
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include "JsonFieldData.h"
-
+#include "Misc/Compression.h"
 #include "Engine/UserDefinedEnum.h"
 
-USerializableInterface::USerializableInterface(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
-{
-}
 
 //////////////////////////////////////////////////////////////////////////
 // UJsonFieldData
@@ -76,12 +72,12 @@ FString UJsonFieldData::GetContentString()
 	FString UncompressedData = GetContentString();
 	uint32 UncompressedSize = sizeof(TCHAR)*(UncompressedData.Len());
 
-	int32 CompressedSize = FCompression::CompressMemoryBound(COMPRESS_ZLIB, UncompressedSize);
+	int32 CompressedSize = FCompression::CompressMemoryBound(TEXT("ZLIB"), UncompressedSize);
 	TArray<uint8> CompressedData;
 	CompressedData.AddUninitialized(CompressedSize + sizeof(UncompressedSize));
 	
 	FMemory::Memcpy(&CompressedData[0], &UncompressedSize, sizeof(UncompressedSize));
-	bIsValid = FCompression::CompressMemory(COMPRESS_ZLIB, CompressedData.GetData() + sizeof(UncompressedSize), CompressedSize, *UncompressedData, UncompressedSize);
+	bIsValid = FCompression::CompressMemory(TEXT("ZLIB"), CompressedData.GetData() + sizeof(UncompressedSize), CompressedSize, *UncompressedData, UncompressedSize);
 	
 	if (bIsValid) {
 		CompressedData.SetNum(CompressedSize+ sizeof(UncompressedSize), false);
@@ -201,7 +197,7 @@ UJsonFieldData* UJsonFieldData::SetObject(const FString& key, const UJsonFieldDa
 UJsonFieldData* UJsonFieldData::SetUObject(const FString& key, const UObject* Container)
 {
 	if (!Container) {
-		UE_LOG(LogJson, Error, TEXT("NULL Object Reference for %s"), *key);
+		Data->SetObject(*key, nullptr);
 		return this;
 	}
 	UClass* ObjectClass = Container->GetClass();
@@ -539,7 +535,7 @@ UJsonFieldData * UJsonFieldData::SetByteArray(const FString & key, const TArray<
 */
 UJsonFieldData * UJsonFieldData::SetBool(const FString & key, bool value)
 {
-	Data->SetNumberField(*key, (value ? 1 : 0));
+	Data->SetBoolField(*key, value);
 	return this;
 }
 
@@ -557,7 +553,7 @@ UJsonFieldData * UJsonFieldData::SetBoolArray(const FString & key, const TArray<
 
 	// Loop through the input array and add new shareable FJsonValueString instances to the data array
 	for (int32 i = 0; i < arrayData.Num(); i++) {
-		dataArray->Add(MakeShareable(new FJsonValueNumber( (arrayData[i] ? 1 : 0) )));
+		dataArray->Add(MakeShareable(new FJsonValueBoolean( arrayData[i] ));
 	}
 
 	Data->SetArrayField(*key, *dataArray);
@@ -615,7 +611,7 @@ UJsonFieldData* UJsonFieldData::GetObject(const FString& key) const
 	const TSharedPtr<FJsonObject> *outPtr;
 	if (!Data->TryGetObjectField(*key, outPtr)) {
 		// Throw an error and return NULL when the key could not be found
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
 		return NULL;
 	}
 
@@ -633,7 +629,7 @@ UClass * UJsonFieldData::GetClass(const FString & key) const
 	
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetStringField(*key, classPath)) {
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
 		return nullptr;
 	}
 	
@@ -660,7 +656,7 @@ TArray<UClass*> UJsonFieldData::GetClassArray(const FString & key) const
 	}
 	else {
 		// Throw an error when the entry could not be found in the field data
-		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
 	}
 
 	// Return the array, if unsuccessful the array will be empty
@@ -687,7 +683,7 @@ TArray<FString> UJsonFieldData::GetStringArray(const FString& key) const
 		}
 	} else {
 		// Throw an error when the entry could not be found in the field data
-		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key); 
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
 	}
 
 	// Return the array, if unsuccessful the array will be empty
@@ -701,7 +697,7 @@ FName UJsonFieldData::GetName(const FString & key) const
 
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetStringField(*key, str)) {
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
 		return "";
 	}
 
@@ -722,7 +718,7 @@ TArray<FName> UJsonFieldData::GetNameArray(const FString & key) const
 	}
 	else {
 		// Throw an error when the entry could not be found in the field data
-		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
 	}
 
 	// Return the array, if unsuccessful the array will be empty
@@ -735,8 +731,8 @@ uint8 UJsonFieldData::GetByte(const FString & key) const
 
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetNumberField(*key, outByte)) {
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
-		return 0.0;
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+		return 0;
 	}
 
 	return outByte;
@@ -745,6 +741,7 @@ uint8 UJsonFieldData::GetByte(const FString & key) const
 TArray<uint8> UJsonFieldData::GetByteArray(const FString & key) const
 {
 	TArray<uint32> numberArray;
+	TArray<uint8> outArray;
 
 	// Try to get the array field from the post data
 	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
@@ -753,17 +750,16 @@ TArray<uint8> UJsonFieldData::GetByteArray(const FString & key) const
 		for (int32 i = 0; i < arrayPtr->Num(); i++) {
 			numberArray.Add((*arrayPtr)[i]->AsNumber());
 		}
+
+		outArray.Reset(numberArray.Num());
+		for (uint32 i : numberArray)
+		{
+			outArray.Add(i);
+		}
 	}
 	else {
 		// Throw an error when the entry could not be found in the field data
-		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
-	}
-
-	TArray<uint8> outArray;
-	outArray.Reset(numberArray.Num());
-	for (uint32 i : numberArray)
-	{
-		outArray.Add(i);
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
 	}
 
 	return outArray;
@@ -774,8 +770,8 @@ bool UJsonFieldData::GetBool(const FString & key) const
 	double outBool;
 
 	// If the current post data isn't valid, return an empty string
-	if (!Data->TryGetNumberField(*key, outBool)) {
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
+	if (!Data->TryGetBoolField(*key, outBool)) {
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
 		return false;
 	}
 
@@ -796,7 +792,7 @@ TArray<bool> UJsonFieldData::GetBoolArray(const FString & key) const
 	}
 	else {
 		// Throw an error when the entry could not be found in the field data
-		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
 	}
 
 	return boolArray;
@@ -808,7 +804,7 @@ float UJsonFieldData::GetNumber(const FString & key) const
 
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetNumberField(*key, outNumber)) {
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
 		return 0.0;
 	}
 
@@ -829,7 +825,7 @@ TArray<float> UJsonFieldData::GetNumberArray(const FString & key) const
 	}
 	else {
 		// Throw an error when the entry could not be found in the field data
-		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
 	}
 
 	return numberArray;
@@ -848,7 +844,7 @@ FVector UJsonFieldData::GetVector(const FString & key) const
 			 outVector.Z = ((*arrayPtr)[2]->AsNumber());
 		}
 		else {
-			UE_LOG(LogJson, Error, TEXT("Entry '%s' is not a Vector!"), *key);
+			UE_LOG(LogJson, Warning, TEXT("Entry '%s' is not a Vector!"), *key);
 		}
 	}
 	else {
@@ -1037,7 +1033,7 @@ TArray<UJsonFieldData*> UJsonFieldData::GetObjectArray(const FString& key) const
 	}
 	else {
 		// Throw an error, since the value with the supplied key could not be found
-		UE_LOG(LogJson, Error, TEXT("Array entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
 	}
 
 	// Return the array, will be empty if unsuccessful
@@ -1075,7 +1071,7 @@ FString UJsonFieldData::GetString(const FString& key) const {
 
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetStringField(*key, outString)) {
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
 		return "";
 	}
 
@@ -1094,11 +1090,15 @@ FString UJsonFieldData::GetString(const FString& key) const {
 UJsonFieldData* UJsonFieldData::FromString(const FString& dataString) {
 	TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(dataString);
 
+	if (!dataString.Len()) {
+		UE_LOG(LogJson, Warning, TEXT("JSON data is Empty"), *dataString);
+	}
+
 	// Deserialize the JSON data
 	bool isDeserialized = FJsonSerializer::Deserialize(JsonReader, Data);
 
 	if (!isDeserialized || !Data.IsValid()) {
-		UE_LOG(LogJson, Error, TEXT("JSON data is invalid! Input:\n'%s'"), *dataString);
+		UE_LOG(LogJson, Warning, TEXT("JSON data is invalid! Input:\n'%s'"), *dataString);
 	}
 
 	return this;
@@ -1111,7 +1111,7 @@ UJsonFieldData * UJsonFieldData::FromCompressed(const TArray<uint8>& CompressedD
 	int32 UncompressedSize;
 	FMemory::Memcpy(&UncompressedSize, &CompressedData[0], sizeof(UncompressedSize));
 	UncompressedData.SetNum(UncompressedSize);
-	bIsValid = FCompression::UncompressMemory(COMPRESS_ZLIB, UncompressedData.GetData(), UncompressedSize, CompressedData.GetData() + sizeof(UncompressedSize), CompressedData.Num() - sizeof(UncompressedSize));
+	bIsValid = FCompression::UncompressMemory(TEXT("ZLIB"), UncompressedData.GetData(), UncompressedSize, CompressedData.GetData() + sizeof(UncompressedSize), CompressedData.Num() - sizeof(UncompressedSize));
 
 	if (bIsValid) {
 		FString StringData = FString(UncompressedSize / sizeof(TCHAR), UncompressedData.GetData());

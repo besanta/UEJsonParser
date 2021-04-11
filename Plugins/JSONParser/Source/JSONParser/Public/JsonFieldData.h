@@ -28,24 +28,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 
 #include "JsonFieldData.generated.h"
 
-UINTERFACE(Blueprintable)
-class USerializableInterface : public UInterface
-{
-	GENERATED_UINTERFACE_BODY()
-};
-
-class ISerializableInterface
-{
-	GENERATED_IINTERFACE_BODY()
-
-public:
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "JSON")
-	UJsonFieldData* Serialize(UJsonFieldData* data);
-
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent, Category = "JSON")
-	bool Unserialize(UJsonFieldData* data);
-};
-
 UCLASS(BlueprintType, Blueprintable)
 class UJsonFieldData : public UObject
 {
@@ -241,7 +223,7 @@ public:
 	TArray<UClass*> GetClassArray(const FString& key) const;
 
 	/* Gets an array with post data with the specified key */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Object Array Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Data Array Field"), Category = "JSON")
 	TArray<UJsonFieldData*> GetObjectArray(const FString& key) const;
 
 	/* Get all keys from the object */

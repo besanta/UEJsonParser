@@ -1,7 +1,9 @@
 Intermediate/
 Saved/
+Binaries/
 .vs/
 *.pdb
+*.sln
 UEJSONParser.VC.db
 UEJSONParser.VC.VC.opendb
 Releases

@@ -35,4 +35,4 @@ nicosanta@brightnightgames.net
 
 # License
 This is an open source project, you can use it freely. 
-If you think this project is useful, please give me a star to let me know, so I continue to make it better.
+If you think this project is useful, please give me a star if you like it o/
