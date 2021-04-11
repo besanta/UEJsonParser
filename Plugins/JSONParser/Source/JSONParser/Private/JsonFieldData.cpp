@@ -389,8 +389,10 @@ UJsonFieldData * UJsonFieldData::SetByteArray(const FString & key, const TArray<
 */
 UJsonFieldData * UJsonFieldData::SetBool(const FString & key, bool value)
 {
+#if 0
 	Data->SetBoolField(*key, value);
-
+#endif
+	Data->SetNumberField(*key, (value ? 1 : 0));
 	return this;
 }
 
@@ -408,7 +410,10 @@ UJsonFieldData * UJsonFieldData::SetBoolArray(const FString & key, const TArray<
 
 	// Loop through the input array and add new shareable FJsonValueString instances to the data array
 	for (int32 i = 0; i < arrayData.Num(); i++) {
+#if 0
 		dataArray->Add(MakeShareable(new FJsonValueBoolean( arrayData[i] )));
+#endif
+		dataArray->Add(MakeShareable(new FJsonValueNumber((arrayData[i] ? 1 : 0))));
 	}
 
 	Data->SetArrayField(*key, *dataArray);
@@ -622,11 +627,21 @@ TArray<uint8> UJsonFieldData::GetByteArray(const FString & key) const
 
 bool UJsonFieldData::GetBool(const FString & key) const
 {
+#if 0
 	bool outBool;
-
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetBoolField(*key, outBool)) {
 		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+		return false;
+	}
+	return outBool;
+#endif
+
+	double outBool;
+
+	// If the current post data isn't valid, return an empty string
+	if (!Data->TryGetNumberField(*key, outBool)) {
+		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
 		return false;
 	}
 
