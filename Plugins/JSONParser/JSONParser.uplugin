@@ -10,7 +10,7 @@
 	"DocsURL": "https://github.com/besanta/UEJsonParser",
 	"MarketplaceURL": "",
 	"SupportURL": "",
-	"CanContainContent": true,
+	"CanContainContent": false,
 	"IsBetaVersion": false,
 	"Installed": false,
 	"EnabledByDefault": true,

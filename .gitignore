@@ -1,9 +1,11 @@
 Intermediate/
 Saved/
 Binaries/
+Releases/
+
 .vs/
 *.pdb
 *.sln
+*.dll
 UEJSONParser.VC.db
 UEJSONParser.VC.VC.opendb
-Releases

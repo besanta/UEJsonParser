@@ -15,6 +15,7 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UObject/UnrealType.h"
 #include "Modules/ModuleInterface.h"
 #include "Modules/ModuleManager.h"
 
