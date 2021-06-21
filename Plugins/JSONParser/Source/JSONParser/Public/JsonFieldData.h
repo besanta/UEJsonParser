@@ -66,6 +66,10 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Create JSON Data", HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"), Category = "JSON")
 	static UJsonFieldData* Create(UObject* WorldContextObject);
 
+	/* Creates a new post data object */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Create JSON Data From String", HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"), Category = "JSON")
+	static UJsonFieldData* CreateFromString(UObject* WorldContextObject, const FString& data);
+
 	/* Adds string data to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add String Field"), Category = "JSON")
 	UJsonFieldData* SetString(const FString& key, const FString& value);

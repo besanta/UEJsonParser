@@ -103,6 +103,15 @@ UJsonFieldData* UJsonFieldData::Create(UObject* WorldContextObject) {
 	return fieldData;
 }
 
+UJsonFieldData* UJsonFieldData::CreateFromString(UObject* WorldContextObject, const FString& data)
+{
+	const auto Json = UJsonFieldData::Create(WorldContextObject);
+	if (Json && Json->IsValidLowLevel()) {
+		Json->FromString(data);
+	}
+	return Json;
+}
+
 /**
 * This function will write the supplied key and value to the JsonWriter
 *
@@ -641,7 +650,7 @@ bool UJsonFieldData::GetBool(const FString & key) const
 
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetNumberField(*key, outBool)) {
-		UE_LOG(LogJson, Error, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
 		return false;
 	}
 
@@ -944,6 +953,17 @@ bool UJsonFieldData::WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FSt
 	{
 		TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp, InPropertyData);
 		JsonWriter->SetObjectField(Identifier, JsonStruct);
+	}
+	if (auto ArrayProp = Cast<const UArrayProperty>(InProperty))
+	{
+		TArray<TSharedPtr<FJsonValue>>* dataArray = new TArray<TSharedPtr<FJsonValue>>();
+
+		// Loop through the input array and add new shareable FJsonValueString instances to the data array
+		/*for (int32 i = 0; i < ArrayProp.Num(); i++) {
+			dataArray->Add(MakeShareable(new FJsonValueNumber(arrayData[i])));
+		}*/
+
+		JsonWriter->SetArrayField(Identifier, *dataArray);
 	}
 	else if (auto objectProperty = Cast<UObjectProperty>(InProperty))
 	{
