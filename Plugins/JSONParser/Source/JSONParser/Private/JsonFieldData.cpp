@@ -645,6 +645,7 @@ bool UJsonFieldData::GetBool(const FString & key) const
 	}
 	return outBool;
 #endif
+#if 0
 
 	double outBool;
 
@@ -655,6 +656,14 @@ bool UJsonFieldData::GetBool(const FString & key) const
 	}
 
 	return outBool == 1;
+#endif
+	const TSharedPtr<FJsonValue>* Value = Data->Values.Find(*key);
+
+	if (Value->IsValid()) {
+		return (*Value)->AsBool();
+	}
+	UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+	return false;
 }
 
 TArray<bool> UJsonFieldData::GetBoolArray(const FString & key) const
@@ -666,7 +675,7 @@ TArray<bool> UJsonFieldData::GetBoolArray(const FString & key) const
 	if (Data->TryGetArrayField(*key, arrayPtr)) {
 		// Iterate through the array and use the string value from all the entries
 		for (int32 i = 0; i < arrayPtr->Num(); i++) {
-			boolArray.Add( ((*arrayPtr)[i]->AsNumber() == 1) );
+			boolArray.Add( ((*arrayPtr)[i]->AsBool()) );
 		}
 	}
 	else {
@@ -954,7 +963,12 @@ bool UJsonFieldData::WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FSt
 		TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp, InPropertyData);
 		JsonWriter->SetObjectField(Identifier, JsonStruct);
 	}
-	if (auto ArrayProp = Cast<const UArrayProperty>(InProperty))
+	else if (auto objectProperty = Cast<UObjectProperty>(InProperty))
+	{
+		TSharedPtr<FJsonObject> JsonValue = CreateJsonValueFromUObjectProperty(objectProperty, InPropertyData);
+		JsonWriter->SetObjectField(Identifier, JsonValue);
+	}
+	else if (auto ArrayProp = Cast<const UArrayProperty>(InProperty))
 	{
 		TArray<TSharedPtr<FJsonValue>>* dataArray = new TArray<TSharedPtr<FJsonValue>>();
 
@@ -965,11 +979,7 @@ bool UJsonFieldData::WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FSt
 
 		JsonWriter->SetArrayField(Identifier, *dataArray);
 	}
-	else if (auto objectProperty = Cast<UObjectProperty>(InProperty))
-	{
-		TSharedPtr<FJsonObject> JsonValue = CreateJsonValueFromUObjectProperty(objectProperty, InPropertyData);
-		JsonWriter->SetObjectField(Identifier, JsonValue);
-	}
+	
 	else {
 		JsonWriter->SetField(Identifier, GetJsonValue(InProperty, InPropertyData));
 	}
