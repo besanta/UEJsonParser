@@ -24,9 +24,11 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 #include "Serialization/JsonSerializer.h"
 
 #include "Engine/World.h"
-#include "Engine/Engine.h"
+#include "UObject/UnrealType.h"
 
 #include "JsonFieldData.generated.h"
+
+class FProperty;
 
 UCLASS(BlueprintType, Blueprintable)
 class UJsonFieldData : public UObject
@@ -65,6 +67,9 @@ public:
 	/* Creates a new post data object */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Create JSON Data", HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"), Category = "JSON")
 	static UJsonFieldData* Create(UObject* WorldContextObject);
+
+	/* Creates a new post data object */
+	static UJsonFieldData* CreateFromJson(UObject* WorldContextObject, TSharedPtr<FJsonObject> Data);
 
 	/* Creates a new post data object */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Create JSON Data From String", HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"), Category = "JSON")
@@ -114,6 +119,10 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Field"), Category = "JSON")
 	UJsonFieldData* SetObject(const FString& key, const UJsonFieldData* objectData);
 
+	/* Adds a new post data field to the specified data */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Array Field"), Category = "JSON")
+	UJsonFieldData* SetObjectArray(const FString& key, const TArray<UJsonFieldData*> arrayData);
+
 	/* Adds string data to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Class Field"), Category = "JSON")
 	UJsonFieldData* SetClass(const FString& key, UClass* value);
@@ -121,10 +130,6 @@ public:
 	/* Adds a Bool array to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Class Array Field"), Category = "JSON")
 	UJsonFieldData* SetClassArray(const FString& key, const TArray<UClass*> arrayData);
-
-	/* Adds a new post data field to the specified data */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Array Field"), Category = "JSON")
-	UJsonFieldData* SetObjectArray(const FString& key, const TArray<UJsonFieldData*> arrayData);
 
 	/* Gets string data from the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get String Field"), Category = "JSON")
@@ -170,6 +175,11 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Data Field"), Category = "JSON")
 	UJsonFieldData* GetObject(const FString& key) const;
 
+	/* Gets an array with post data with the specified key */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Data Array Field"), Category = "JSON")
+	TArray<UJsonFieldData*> GetObjectArray(const FString& key) const;
+
+
 	/* Fetches nested post data from the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Class Field"),Category = "JSON")
 	UClass* GetClass(const FString& key) const;
@@ -178,17 +188,18 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Class Array Field"), Category = "JSON")
 	TArray<UClass*> GetClassArray(const FString& key) const;
 
-	/* Gets an array with post data with the specified key */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Data Array Field"), Category = "JSON")
-	TArray<UJsonFieldData*> GetObjectArray(const FString& key) const;
-
+	
 	/* Get all keys from the object */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Object Keys"), Category = "JSON")
 	TArray<FString> GetObjectKeys() const;
 
 	/* Check wheter or not the key is in the property list */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "HasKey"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Has Key"), Category = "JSON")
 	bool HasKey(const FString& key) const;
+
+	/* Check wheter or not the key is in the property list */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Has All Keys"), Category = "JSON")
+	bool HasAllKeys(const TArray<FString>& keys) const;
 
 	/* Creates new data from the input string */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "From String"), Category = "JSON")
@@ -202,6 +213,9 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON|Experimental")
 	UJsonFieldData* SetUObject(const FString& key, const UObject* value);
 
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get UObject Field"), Category = "JSON|Experimental")
+	UObject* GetUObjectField(const FString& Key, UObject* Context, bool& Success);
+	
 	/* Adds Any data to the post data */
 	UFUNCTION(BlueprintPure, CustomThunk, meta = (DisplayName = "Add Any Field", CustomStructureParam = "Value"), Category = "JSON|Experimental")
 	UJsonFieldData* SetAnyProperty(const FString& Key, UProperty* Value);
@@ -209,11 +223,11 @@ public:
 	DECLARE_FUNCTION(execSetAnyProperty)
 	{
 		//https://forums.unrealengine.com/showthread.php?56537-Tutorial-How-to-accept-wildcard-structs-in-your-UFUNCTIONs&p=206131#post206131
-		P_GET_PROPERTY(UStrProperty, Key);
+		P_GET_PROPERTY(FStrProperty, Key);
 		Stack.MostRecentProperty = NULL;
 		Stack.MostRecentPropertyAddress = NULL;
-		Stack.StepCompiledIn<UProperty>(NULL);
-		UProperty* Property = Stack.MostRecentProperty;
+		Stack.StepCompiledIn<FProperty>(NULL);
+		FProperty* Property = Stack.MostRecentProperty;
 		void* DataPtr = Stack.MostRecentPropertyAddress;
 		P_FINISH;
 
@@ -225,21 +239,18 @@ public:
 		*(UJsonFieldData**)RESULT_PARAM = LocalContext;
 	}
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get UObject Field"), Category = "JSON|Experimental")
-	UObject* GetUObjectField(const FString& Key, UObject* Context, bool& Success);
-
 private:
-	static TSharedPtr<FJsonObject> CreateJsonValueFromUObjectProperty(const UObjectProperty * InObjectProperty, const void * InObjectData);
+	static TSharedPtr<FJsonObject> CreateJsonValueFromUObjectProperty(const FObjectProperty * InObjectProperty, const void * InObjectData);
 
 	static TSharedPtr<FJsonObject> CreateJsonValueFromUObject(const UObject* InObject);
 
-	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const UStructProperty* StructProperty, const void* StructPtr);
+	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const FStructProperty* StructProperty, const void* StructPtr);
 
-	static TSharedPtr<FJsonValue> GetJsonValue(const UProperty * InProperty, const void * InPropertyData);
-	static bool SetJsonValue(TSharedPtr<FJsonValue> Value, const UProperty* Property, void* PropertyData);
+	static TArray<TSharedPtr<FJsonValue>> CreateJsonValueArray(const FArrayProperty* ArrayProperty, const void * InPropertyData);
 
-	static bool WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const UProperty* InProperty, const void* InPropertyData);
+	static TSharedPtr<FJsonValue> GetJsonValue(const FProperty * InProperty, const void * InPropertyData);
+	static bool SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty* Property, void* PropertyData);
+
+	static bool WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const FProperty* InProperty, const void* InPropertyData);
 
 };
-
-

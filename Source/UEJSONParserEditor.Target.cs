@@ -8,7 +8,7 @@ public class UEJSONParserEditorTarget : TargetRules
 	public UEJSONParserEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
-
-		ExtraModuleNames.AddRange( new string[] { "UEJSONParser" } );
+        DefaultBuildSettings = BuildSettingsVersion.V2;
+        ExtraModuleNames.AddRange( new string[] { "UEJSONParser" } );
 	}
 }
