@@ -61,7 +61,7 @@ public:
 	FString GetContentString();
 
 	/* Get Content of the FieldData as a compressed String */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Archive"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Archive"), Category = "JSON")
 	void GetContentCompressed(TArray<uint8>& Compressed, bool& bIsValid);
 
 	/* Creates a new post data object */
@@ -114,6 +114,21 @@ public:
 	/* Adds Number data to the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Number Array Field"), Category = "JSON")
 	UJsonFieldData* SetNumberArray(const FString& key, const TArray<float> arrayData);
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Vector Field"), Category = "JSON")
+	UJsonFieldData * SetVector(const FString & key, FVector value);
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Vector Array Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UJsonFieldData * SetVectorArray(const FString & key, const TArray<FVector>& arrayData);
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Color Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UJsonFieldData * SetColor(const FString & key, FColor value);
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Rotator Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UJsonFieldData * SetRotator(const FString & key, FRotator value);
+	
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Transform Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UJsonFieldData * SetTransform(const FString & key, FTransform value);
 
 	/* Sets nested object data to the post array */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Field"), Category = "JSON")
@@ -179,6 +194,24 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Data Array Field"), Category = "JSON")
 	TArray<UJsonFieldData*> GetObjectArray(const FString& key) const;
 
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Transform Field"), Category = "JSON")
+	FTransform GetTransform(const FString & key) const;
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Rotator Field"), Category = "JSON")
+	FRotator GetRotator(const FString & key) const;
+	
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Color Field"), Category = "JSON")
+	FColor GetColor(const FString & key) const;
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Color Array Field"), Category = "JSON")
+	TArray<FColor> GetColorArray(const FString & key) const;
+
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Vector Field"), Category = "JSON")
+	FVector GetVector(const FString & key) const;
+	
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Vector Array Field"), Category = "JSON")
+	TArray<FVector> GetVectorArray(const FString & key) const;
+
 
 	/* Fetches nested post data from the post data */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Class Field"),Category = "JSON")
@@ -206,7 +239,7 @@ public:
 	UJsonFieldData* FromString(const FString& dataString);
 
 	/* Creates new data from the input compressed JSON string */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "From Archive"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "From Archive"), Category = "JSON")
 	UJsonFieldData* FromCompressed(const TArray<uint8>& CompressedData, bool& bIsValid);
 
 	/* Adds UObject data to the post data */
@@ -252,5 +285,49 @@ private:
 	static bool SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty* Property, void* PropertyData);
 
 	static bool WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const FProperty* InProperty, const void* InPropertyData);
+
+#if 0
+	FORCEINLINE static TSharedRef<FJsonValue> CreateJsonValueFromVector(const FVector& InVec)
+	{
+		TArray<TSharedPtr<FJsonValue>> *StructJsonArray = new TArray<TSharedPtr<FJsonValue>>();
+		StructJsonArray->Add(MakeShareable(new FJsonValueNumber(InVec.X)));
+		StructJsonArray->Add(MakeShareable(new FJsonValueNumber(InVec.Y)));
+		StructJsonArray->Add(MakeShareable(new FJsonValueNumber(InVec.Z)));
+		return MakeShareable(new FJsonValueArray(*StructJsonArray));
+
+
+	}
+#endif
+	FORCEINLINE static FVector CreateVectorFromJsonValue(const TSharedPtr<FJsonValue>& InJson)
+	{
+		check(InJson.IsValid());
+		FVector OutVector;
+		TArray<TSharedPtr<FJsonValue>> JsonArray = InJson->AsArray();
+		OutVector.X = JsonArray[0]->AsNumber();
+		OutVector.Y = JsonArray[1]->AsNumber();
+		OutVector.Z = JsonArray[2]->AsNumber();
+		return OutVector;
+	}
+
+	FORCEINLINE static FColor CreateColorFromJsonValue(const TSharedPtr<FJsonValue>& InJson)
+	{
+		check(InJson.IsValid());
+		FColor outColor;
+		TArray<TSharedPtr<FJsonValue>> JsonArray = InJson->AsArray();
+		if (JsonArray.Num() == 3) {
+			outColor.R = JsonArray[0]->AsNumber();
+			outColor.G = JsonArray[1]->AsNumber();
+			outColor.B = JsonArray[2]->AsNumber();
+			outColor.A = 1.0;
+		}
+		else if (JsonArray.Num() == 4) {
+			outColor.R = JsonArray[0]->AsNumber();
+			outColor.G = JsonArray[1]->AsNumber();
+			outColor.B = JsonArray[2]->AsNumber();
+			outColor.A = JsonArray[3]->AsNumber();
+		}
+
+		return outColor;
+	}
 
 };

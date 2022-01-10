@@ -1,6 +1,7 @@
 #include "JsonLoader.h"
-
-void ULZAsyncAction_RequestHttpMessage::Activate()
+#include "Misc/FileHelper.h"
+#include "Templates/Function.h"
+void UJSONAsyncAction_RequestHttpMessage::Activate()
 {
 	// Create HTTP Request
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
@@ -25,7 +26,7 @@ void ULZAsyncAction_RequestHttpMessage::Activate()
 }
 
 
-void ULZAsyncAction_RequestHttpMessage::HandleRequestCompleted(FString ResponseString, bool bSuccess)
+void UJSONAsyncAction_RequestHttpMessage::HandleRequestCompleted(FString ResponseString, bool bSuccess)
 {
 	UJsonFieldData* JsonData = nullptr;
 	FString OutString;
@@ -37,7 +38,7 @@ void ULZAsyncAction_RequestHttpMessage::HandleRequestCompleted(FString ResponseS
 		FJsonSerializer::Deserialize(JsonReader, JsonObject);
 
 		if (RegisteredWithGameInstance.IsValid()) {
-			// JsonData = UJsonFieldData::CreateFromJson(RegisteredWithGameInstance.Get(), JsonObject);
+			JsonData = UJsonFieldData::CreateFromJson(RegisteredWithGameInstance.Get(), JsonObject);
 		}
 	}
 	
@@ -45,11 +46,52 @@ void ULZAsyncAction_RequestHttpMessage::HandleRequestCompleted(FString ResponseS
 }
 
 
-ULZAsyncAction_RequestHttpMessage* ULZAsyncAction_RequestHttpMessage::AsyncRequestHTTP(UObject* WorldContextObject, FString URL)
+UJSONAsyncAction_RequestHttpMessage* UJSONAsyncAction_RequestHttpMessage::AsyncRequestHTTP(UObject* WorldContextObject, FString URL)
 {
 	// Create Action Instance for Blueprint System
-	ULZAsyncAction_RequestHttpMessage* Action = NewObject<ULZAsyncAction_RequestHttpMessage>();
+	UJSONAsyncAction_RequestHttpMessage* Action = NewObject<UJSONAsyncAction_RequestHttpMessage>();
 	Action->URL = URL;
+	Action->RegisterWithGameInstance(WorldContextObject);
+
+	return Action;
+}
+
+////////////////////////
+
+
+void UJSONAsyncAction_RequestFile::Activate()
+{
+	FString FileData;
+	auto Result = FFileHelper::LoadFileToString(FileData, *Filename);
+	HandleRequestCompleted(FileData, true);
+}
+
+
+void UJSONAsyncAction_RequestFile::HandleRequestCompleted(FString ResponseString, bool bSuccess)
+{
+	UJsonFieldData* JsonData = nullptr;
+	FString OutString;
+	if (bSuccess)
+	{
+		/* Deserialize object */
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(ResponseString);
+		FJsonSerializer::Deserialize(JsonReader, JsonObject);
+
+		if (RegisteredWithGameInstance.IsValid()) {
+			JsonData = UJsonFieldData::CreateFromJson(RegisteredWithGameInstance.Get(), JsonObject);
+		}
+	}
+
+	Completed.Broadcast(JsonData, bSuccess);
+}
+
+
+UJSONAsyncAction_RequestFile* UJSONAsyncAction_RequestFile::AsyncRequestFile(UObject* WorldContextObject, FString Filename)
+{
+	// Create Action Instance for Blueprint System
+	UJSONAsyncAction_RequestFile* Action = NewObject<UJSONAsyncAction_RequestFile>();
+	Action->Filename = Filename;
 	Action->RegisterWithGameInstance(WorldContextObject);
 
 	return Action;

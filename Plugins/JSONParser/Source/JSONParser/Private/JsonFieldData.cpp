@@ -475,6 +475,132 @@ UJsonFieldData * UJsonFieldData::SetNumberArray(const FString & key, const TArra
 }
 
 /**
+* Adds the supplied vector to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Vector
+*
+* @return	The object itself
+*/
+UJsonFieldData * UJsonFieldData::SetVector(const FString & key, FVector value)
+{
+	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.X)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.Y)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.Z)));
+	Data->SetArrayField(*key, *dataArray);
+	return this;
+}
+
+/**
+* Adds the supplied vector array to the post data, under the given key
+*
+* @param	key					Key
+* @param	arrayData			Vector Array
+*
+* @return	The object itself
+*/
+UJsonFieldData * UJsonFieldData::SetVectorArray(const FString & key, const TArray<FVector>& arrayData)
+{
+	/*
+	TArray<TSharedPtr<FJsonValue>> *Array = new TArray<TSharedPtr<FJsonValue>>();
+	// Loop through the array and create new shared FJsonValueObject instances for every FJsonObject
+	//Due to the fact that the first object of the json stack is a requirement set serialize an array,the index is used as a key
+	for (auto iData : arrayData)
+	{
+		TSharedPtr<FJsonValue> DataArray = CreateJsonValueFromVector(iData);
+		Array->Add(DataArray);
+	}
+
+	Data->SetArrayField(*key, *Array);
+	*/
+
+	TSharedPtr<FJsonObject> FakeArray = MakeShareable(new FJsonObject());
+	for (int i = 0; i < arrayData.Num(); i++)
+	{
+		FVector value = arrayData[i];
+		TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+		dataArray->Add(MakeShareable(new FJsonValueNumber(value.X)));
+		dataArray->Add(MakeShareable(new FJsonValueNumber(value.Y)));
+		dataArray->Add(MakeShareable(new FJsonValueNumber(value.Z)));
+		FakeArray->SetArrayField(FString::FromInt(i), *dataArray);
+	}
+
+	Data->SetObjectField(*key, FakeArray);
+
+	return this;
+}
+
+/**
+* Adds the supplied Color to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Color
+*
+* @return	The object itself
+*/
+UJsonFieldData * UJsonFieldData::SetColor(const FString & key, FColor value)
+{
+	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.R)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.G)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.B)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.A)));
+	Data->SetArrayField(*key, *dataArray);
+	return this;
+}
+
+
+/**
+* Adds the supplied Rotator to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Rotator
+*
+* @return	The object itself
+*/
+UJsonFieldData * UJsonFieldData::SetRotator(const FString & key, FRotator value)
+{
+	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.Pitch)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.Yaw)));
+	dataArray->Add(MakeShareable(new FJsonValueNumber(value.Roll)));
+
+	Data->SetArrayField(*key, *dataArray);
+	return this;
+}
+
+/**
+* Adds the supplied Transform to the post data, under the given key
+*
+* @param	key					Key
+* @param	value				Transform
+*
+* @return	The object itself
+*/
+UJsonFieldData * UJsonFieldData::SetTransform(const FString & key, FTransform value)
+{
+	TArray<TSharedPtr<FJsonValue>> *transformArray = new TArray<TSharedPtr<FJsonValue>>();
+
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetLocation().X)));
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetLocation().Y)));
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetLocation().Z)));
+
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().X)));
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().Y)));
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().Z)));
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().W)));
+
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetScale3D().X)));
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetScale3D().Y)));
+	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetScale3D().Z)));
+
+	Data->SetArrayField(*key, *transformArray);
+	return this;
+}
+
+
+/**
 * Gets the post data object from the post data with the given key
 *
 * @param	WorldContextObject		Array of strings
@@ -540,6 +666,25 @@ TArray<UClass*> UJsonFieldData::GetClassArray(const FString & key) const
 
 	// Return the array, if unsuccessful the array will be empty
 	return classArray;
+}
+
+/**
+* Tries to get a string from the field data by key, returns the string when successful
+*
+* @param	key			Key
+*
+* @return	The requested string, empty if failed
+*/
+FString UJsonFieldData::GetString(const FString& key) const {
+	FString outString;
+
+	// If the current post data isn't valid, return an empty string
+	if (!Data->TryGetStringField(*key, outString)) {
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+		return "";
+	}
+
+	return outString;
 }
 
 /**
@@ -759,6 +904,187 @@ TArray<UJsonFieldData*> UJsonFieldData::GetObjectArray(const FString& key) const
 	return objectArray;
 }
 
+
+FTransform UJsonFieldData::GetTransform(const FString & key) const
+{
+	FTransform outTransform;
+
+	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
+	if (Data->TryGetArrayField(*key, arrayPtr))
+	{
+		// Iterate through the array and use the string value from all the entries
+		if (arrayPtr->Num() == 10)
+		{
+			FVector loc = FVector(
+				((*arrayPtr)[0]->AsNumber()),
+				((*arrayPtr)[1]->AsNumber()),
+				((*arrayPtr)[2]->AsNumber())
+			);
+
+			FQuat quat = FQuat(
+				((*arrayPtr)[3]->AsNumber()),
+				((*arrayPtr)[4]->AsNumber()),
+				((*arrayPtr)[5]->AsNumber()),
+				((*arrayPtr)[6]->AsNumber())
+			);
+
+			FVector scale = FVector(
+				((*arrayPtr)[7]->AsNumber()),
+				((*arrayPtr)[8]->AsNumber()),
+				((*arrayPtr)[9]->AsNumber())
+			);
+			outTransform = FTransform(quat, loc, scale);
+
+		}
+		else {
+			UE_LOG(LogJson, Warning, TEXT("Entry '%s' is not a Transform!"), *key);
+		}
+	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+
+
+	return outTransform;
+}
+
+
+FRotator UJsonFieldData::GetRotator(const FString & key) const
+{
+	FRotator outRotator;
+	// Try to get the array field from the post data
+	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
+	if (Data->TryGetArrayField(*key, arrayPtr))
+	{
+		// Iterate through the array and use the string value from all the entries
+		if (arrayPtr->Num() == 3)
+		{
+			outRotator = FRotator(
+				((*arrayPtr)[0]->AsNumber()),
+				((*arrayPtr)[1]->AsNumber()),
+				((*arrayPtr)[2]->AsNumber())
+			);
+
+		}
+		else
+		{
+			UE_LOG(LogJson, Warning, TEXT("Entry '%s' is not a Rotator!"), *key);
+		}
+	}
+	else
+	{
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+	return outRotator;
+}
+
+
+FColor UJsonFieldData::GetColor(const FString & key) const
+{
+	FColor outVector;
+	// Try to get the array field from the post data
+	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
+	if (Data->TryGetArrayField(*key, arrayPtr)) {
+		// Iterate through the array and use the string value from all the entries
+		if (arrayPtr->Num() == 3) {
+			outVector.R = ((*arrayPtr)[0]->AsNumber());
+			outVector.G = ((*arrayPtr)[1]->AsNumber());
+			outVector.B = ((*arrayPtr)[2]->AsNumber());
+			outVector.A = 1.0;
+		}
+		else if (arrayPtr->Num() == 4) {
+			outVector.R = ((*arrayPtr)[0]->AsNumber());
+			outVector.G = ((*arrayPtr)[1]->AsNumber());
+			outVector.B = ((*arrayPtr)[2]->AsNumber());
+			outVector.A = ((*arrayPtr)[3]->AsNumber());
+		}
+		else {
+			UE_LOG(LogJson, Warning, TEXT("Entry '%s' is not a Color!"), *key);
+		}
+	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+
+	return outVector;
+}
+
+TArray<FColor> UJsonFieldData::GetColorArray(const FString & key) const
+{
+	TArray<FColor> OutColorArray;
+	const TSharedPtr<FJsonObject> * ArrayObject;
+	if (Data->TryGetObjectField(*key, ArrayObject))
+	{
+		for (auto iKey = (*ArrayObject)->Values.CreateConstIterator(); iKey; ++iKey)
+		{
+			const TSharedPtr<FJsonValue> JsonValue = iKey.Value();
+			const FColor iColor = FColor();
+			OutColorArray.Add(iColor);
+		}
+	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+
+	return OutColorArray;
+}
+
+FVector UJsonFieldData::GetVector(const FString & key) const
+{
+	FVector outVector;
+	// Try to get the array field from the post data
+	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
+	if (Data->TryGetArrayField(*key, arrayPtr)) {
+		// Iterate through the array and use the string value from all the entries
+		if (arrayPtr->Num() == 3) {
+			outVector.X = ((*arrayPtr)[0]->AsNumber());
+			outVector.Y = ((*arrayPtr)[1]->AsNumber());
+			outVector.Z = ((*arrayPtr)[2]->AsNumber());
+		}
+		else {
+			UE_LOG(LogJson, Warning, TEXT("Entry '%s' is not a Vector!"), *key);
+		}
+	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+
+	return outVector;
+}
+
+TArray<FVector> UJsonFieldData::GetVectorArray(const FString & key) const
+{
+	TArray<FVector> OutVectorArray;
+	//const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
+	//if (Data->TryGetArrayField(*key, arrayPtr)) {
+	//	// Iterate through the array and use the string value from all the entries
+	//	for (TSharedPtr<FJsonValue> JsonValue : *arrayPtr)
+	//	{
+	//		OutVectorArray.Add(CreateVectorFromJsonValue(JsonValue));
+	//	}
+	//}
+	const TSharedPtr<FJsonObject> * ArrayObject;
+	if (Data->TryGetObjectField(*key, ArrayObject))
+	{
+		for (auto iKey = (*ArrayObject)->Values.CreateConstIterator(); iKey; ++iKey)
+		{
+			const TSharedPtr<FJsonValue> JsonValue = iKey.Value();
+			const FVector iVector = FVector();// CreateVectorFromJsonValue(JsonValue);
+			OutVectorArray.Add(iVector);
+		}
+	}
+	else {
+		// Throw an error when the entry could not be found in the field data
+		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+	}
+
+	return OutVectorArray;
+}
 /**
 * Gets the keys from the supplied object
 *
@@ -800,24 +1126,6 @@ bool UJsonFieldData::HasAllKeys(const TArray<FString>& keys) const
 	return check;
 }
 
-/**
-* Tries to get a string from the field data by key, returns the string when successful
-*
-* @param	key			Key
-*
-* @return	The requested string, empty if failed
-*/
-FString UJsonFieldData::GetString(const FString& key) const {
-	FString outString;
-
-	// If the current post data isn't valid, return an empty string
-	if (!Data->TryGetStringField(*key, outString)) {
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
-		return "";
-	}
-
-	return outString;
-}
 
 
 
@@ -990,7 +1298,6 @@ TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArray
 		}
 	}
 #endif
-	auto InnerClass = ArrayProperty->Inner->StaticClass();
 	for (int32 i = 0; i < ArrayHelper.Num(); i++) 
 	{
 		if (auto BoolInnerProp = Cast<FBoolProperty>(ArrayProperty->Inner)) {
@@ -998,10 +1305,12 @@ TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArray
 			auto JsonValue = MakeShareable(new FJsonValueBoolean(InnerValue));
 			dataArray.Add(JsonValue);
 		}
-		else if (InnerClass == FObjectProperty::StaticClass())
+		else if (auto ObjectInnerProp = Cast<FObjectProperty>(ArrayProperty->Inner))
 		{
-			FObjectProperty* InnerProp = Cast<FObjectProperty>(ArrayProperty->Inner);
-			UObject* Object = InnerProp->GetObjectPropertyValue(ArrayHelper.GetRawPtr(i));
+			UObject* Object = ObjectInnerProp->GetObjectPropertyValue(ArrayHelper.GetRawPtr(i));
+			auto JsonObject = CreateJsonValueFromUObject(Object);
+			auto JsonValue = MakeShareable(new FJsonValueObject(JsonObject));
+			dataArray.Add(JsonValue);
 		}
 		else if (auto StrInnerProp = Cast<FStrProperty>(ArrayProperty->Inner))
 		{
