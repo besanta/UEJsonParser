@@ -1,4 +1,5 @@
 #include "JsonLoader.h"
+#include "Async/Async.h"
 #include "Misc/FileHelper.h"
 #include "Templates/Function.h"
 void UJSONAsyncAction_RequestHttpMessage::Activate()
@@ -61,9 +62,12 @@ UJSONAsyncAction_RequestHttpMessage* UJSONAsyncAction_RequestHttpMessage::AsyncR
 
 void UJSONAsyncAction_RequestFile::Activate()
 {
-	FString FileData;
-	auto Result = FFileHelper::LoadFileToString(FileData, *Filename);
-	HandleRequestCompleted(FileData, true);
+	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [this]()
+	{
+		FString FileData;
+		auto Result = FFileHelper::LoadFileToString(FileData, *Filename);
+		HandleRequestCompleted(FileData, Result);
+	});
 }
 
 
@@ -83,7 +87,11 @@ void UJSONAsyncAction_RequestFile::HandleRequestCompleted(FString ResponseString
 		}
 	}
 
-	Completed.Broadcast(JsonData, bSuccess);
+	AsyncTask(ENamedThreads::GameThread, [this, JsonData, bSuccess]()
+	{
+		Completed.Broadcast(JsonData, bSuccess);
+		SetReadyToDestroy();
+	});
 }
 
 
