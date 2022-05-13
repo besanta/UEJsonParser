@@ -70,9 +70,10 @@ void UJSONAsyncAction_RequestFile::Activate()
 	});
 }
 
-
 void UJSONAsyncAction_RequestFile::HandleRequestCompleted(FString ResponseString, bool bSuccess)
 {
+	// credits : https://www.tomlooman.com/unreal-engine-async-blueprint-http-json/
+	
 	UJsonFieldData* JsonData = nullptr;
 	FString OutString;
 	if (bSuccess)
@@ -90,7 +91,7 @@ void UJSONAsyncAction_RequestFile::HandleRequestCompleted(FString ResponseString
 	AsyncTask(ENamedThreads::GameThread, [this, JsonData, bSuccess]()
 	{
 		Completed.Broadcast(JsonData, bSuccess);
-		SetReadyToDestroy();
+		//SetReadyToDestroy();
 	});
 }
 

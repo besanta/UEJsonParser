@@ -16,11 +16,9 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 #include "UObject/Interface.h"
 
 #include "Serialization/JsonTypes.h"
-#include "Dom/JsonValue.h"
-#include "Dom/JsonObject.h"
+//#include "Dom/JsonValue.h"
+//#include "Dom/JsonObject.h"
 
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonWriter.h"
 #include "Serialization/JsonSerializer.h"
 
 #include "Engine/World.h"
@@ -59,6 +57,10 @@ public:
 	/* Get Content of the FieldData as a String */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Content String"), Category = "JSON")
 	FString GetContentString();
+
+	/* Get pretty content of the FieldData as a String */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Pretty String"), Category = "JSON")
+	FString GetPrettyString();
 
 	/* Get Content of the FieldData as a compressed String */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Archive"), Category = "JSON")
@@ -122,7 +124,7 @@ public:
 	UJsonFieldData * SetVectorArray(const FString & key, const TArray<FVector>& arrayData);
 
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Color Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
-	UJsonFieldData * SetColor(const FString & key, FColor value);
+	UJsonFieldData * SetColor(const FString & key, const FLinearColor& value);
 
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Rotator Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
 	UJsonFieldData * SetRotator(const FString & key, FRotator value);
@@ -201,10 +203,10 @@ public:
 	FRotator GetRotator(const FString & key) const;
 	
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Color Field"), Category = "JSON")
-	FColor GetColor(const FString & key) const;
+	FLinearColor GetColor(const FString & key) const;
 
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Color Array Field"), Category = "JSON")
-	TArray<FColor> GetColorArray(const FString & key) const;
+	TArray<FLinearColor> GetColorArray(const FString & key) const;
 
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Vector Field"), Category = "JSON")
 	FVector GetVector(const FString & key) const;
@@ -286,48 +288,70 @@ private:
 
 	static bool WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const FProperty* InProperty, const void* InPropertyData);
 
-#if 0
-	FORCEINLINE static TSharedRef<FJsonValue> CreateJsonValueFromVector(const FVector& InVec)
-	{
-		TArray<TSharedPtr<FJsonValue>> *StructJsonArray = new TArray<TSharedPtr<FJsonValue>>();
-		StructJsonArray->Add(MakeShareable(new FJsonValueNumber(InVec.X)));
-		StructJsonArray->Add(MakeShareable(new FJsonValueNumber(InVec.Y)));
-		StructJsonArray->Add(MakeShareable(new FJsonValueNumber(InVec.Z)));
-		return MakeShareable(new FJsonValueArray(*StructJsonArray));
 
-
-	}
-#endif
-	FORCEINLINE static FVector CreateVectorFromJsonValue(const TSharedPtr<FJsonValue>& InJson)
+	FORCEINLINE static TSharedPtr<FJsonObject> CreateJSONVector(const FVector& value)
 	{
-		check(InJson.IsValid());
-		FVector OutVector;
-		TArray<TSharedPtr<FJsonValue>> JsonArray = InJson->AsArray();
-		OutVector.X = JsonArray[0]->AsNumber();
-		OutVector.Y = JsonArray[1]->AsNumber();
-		OutVector.Z = JsonArray[2]->AsNumber();
-		return OutVector;
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+		JsonObject->SetNumberField("X", value.X);
+		JsonObject->SetNumberField("Y", value.Y);
+		JsonObject->SetNumberField("Z", value.Z);
+		return JsonObject;
 	}
 
-	FORCEINLINE static FColor CreateColorFromJsonValue(const TSharedPtr<FJsonValue>& InJson)
+	FORCEINLINE static FVector CreateVector(const TSharedPtr<FJsonObject> JsonObject)
 	{
-		check(InJson.IsValid());
-		FColor outColor;
-		TArray<TSharedPtr<FJsonValue>> JsonArray = InJson->AsArray();
-		if (JsonArray.Num() == 3) {
-			outColor.R = JsonArray[0]->AsNumber();
-			outColor.G = JsonArray[1]->AsNumber();
-			outColor.B = JsonArray[2]->AsNumber();
-			outColor.A = 1.0;
-		}
-		else if (JsonArray.Num() == 4) {
-			outColor.R = JsonArray[0]->AsNumber();
-			outColor.G = JsonArray[1]->AsNumber();
-			outColor.B = JsonArray[2]->AsNumber();
-			outColor.A = JsonArray[3]->AsNumber();
+		if (JsonObject->HasTypedField<EJson::Number>("X")
+			&& JsonObject->HasTypedField<EJson::Number>("Y")
+			&& JsonObject->HasTypedField<EJson::Number>("Z")
+			)
+		{
+			return FVector(
+				JsonObject->GetNumberField("X"),
+				JsonObject->GetNumberField("Y"),
+				JsonObject->GetNumberField("Z")
+			);
 		}
 
-		return outColor;
+		return FVector();
 	}
 
+	FORCEINLINE static TSharedPtr<FJsonObject> CreateJSONColor(const FLinearColor& value)
+	{
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+		JsonObject->SetNumberField("R", value.R);
+		JsonObject->SetNumberField("G", value.G);
+		JsonObject->SetNumberField("B", value.B);
+		JsonObject->SetNumberField("A", value.A);
+
+		return JsonObject;
+	}
+
+	FORCEINLINE static FLinearColor CreateColor(const TSharedPtr<FJsonObject> JsonObject)
+	{
+		if (JsonObject->HasTypedField<EJson::Number>("R")
+			&& JsonObject->HasTypedField<EJson::Number>("G")
+			&& JsonObject->HasTypedField<EJson::Number>("B")
+			&& JsonObject->HasTypedField<EJson::Number>("A")
+			)
+		{
+			return FLinearColor(
+				JsonObject->GetNumberField("R"),
+				JsonObject->GetNumberField("G"),
+				JsonObject->GetNumberField("B"),
+				JsonObject->GetNumberField("A")
+			);
+		}
+
+		return FLinearColor();
+	}
+
+	FORCEINLINE static TSharedPtr<FJsonObject> CreateJSONRotator(const FRotator& value)
+	{
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+		JsonObject->SetNumberField("Pitch", value.Pitch);
+		JsonObject->SetNumberField("Yaw", value.Yaw);
+		JsonObject->SetNumberField("Roll", value.Roll);
+
+		return JsonObject;
+	}
 };
