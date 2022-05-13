@@ -50,10 +50,6 @@ public:
 		return GEngine->GetWorldFromContextObject(contextObject, EGetWorldErrorMode::LogAndReturnNull);
 	}
 
-	/* Contains the actual page content, as a string */
-	//UProperty(VisibleAnywhere, BlueprintReadOnly, Category = "JSON")
-	//FString Content;
-
 	/* Get Content of the FieldData as a String */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Content String"), Category = "JSON")
 	FString GetContentString();
@@ -353,5 +349,22 @@ private:
 		JsonObject->SetNumberField("Roll", value.Roll);
 
 		return JsonObject;
+	}
+
+	FORCEINLINE static FRotator CreateRotator(const TSharedPtr<FJsonObject> JsonObject)
+	{
+		if (JsonObject->HasTypedField<EJson::Number>("Yaw")
+			&& JsonObject->HasTypedField<EJson::Number>("Pitch")
+			&& JsonObject->HasTypedField<EJson::Number>("Roll")
+			)
+		{
+			return FRotator(
+				JsonObject->GetNumberField("Yaw"),
+				JsonObject->GetNumberField("Pitch"),
+				JsonObject->GetNumberField("Roll")
+			);
+		}
+
+		return FRotator();
 	}
 };
