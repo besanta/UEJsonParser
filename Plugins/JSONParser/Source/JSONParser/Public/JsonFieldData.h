@@ -239,6 +239,10 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Remove Key"), Category = "JSON")
 	UJsonFieldData* RemoveKey(const FString& key);
 
+	/* Copy to another JSON */
+	UFUNCTION(meta = (DisplayName = "Copy"), Category = "JSON")
+	UJsonFieldData* Copy();
+
 	/* Creates new data from the input string */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "From String"), Category = "JSON")
 	UJsonFieldData* FromString(const FString& dataString);

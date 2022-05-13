@@ -1210,7 +1210,7 @@ bool UJsonFieldData::HasAllKeys(const TArray<FString>& keys) const
 */
 UJsonFieldData* UJsonFieldData::RemoveKey(const FString& key)
 {
-	if (key.IsEmpty()) {
+	if (!Data.IsValid() || key.IsEmpty()) {
 		return this;
 	}
 
@@ -1218,6 +1218,15 @@ UJsonFieldData* UJsonFieldData::RemoveKey(const FString& key)
 	return this;
 }
 
+UJsonFieldData* UJsonFieldData::Copy()
+{
+	if (!Data.IsValid()) {
+		return NULL;
+	}
+
+	const auto Content = GetContentString();
+	return FromString(Content);
+}
 
 /**
 * Creates new data from a given string
