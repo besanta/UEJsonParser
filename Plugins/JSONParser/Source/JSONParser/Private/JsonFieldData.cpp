@@ -1,5 +1,8 @@
 /*
-Copyright 2018 Bright Night Games
+Copyright 2018-2021 Bright Night Games
+
+author: Santamaria Nicolas
+version: 1.0
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"),
 to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -133,6 +136,13 @@ UJsonFieldData* UJsonFieldData::Create(UObject* WorldContextObject) {
 	return fieldData;
 }
 
+/**
+* Create a new instance of the UJsonFieldData class, for use in Blueprint graphs.
+*
+* @param	WorldContextObject		The current context
+*
+* @return	A pointer to the newly created post data
+*/
 UJsonFieldData * UJsonFieldData::CreateFromJson(UObject * WorldContextObject, TSharedPtr<FJsonObject> data)
 {
 	const auto Json = UJsonFieldData::Create(WorldContextObject);
@@ -143,6 +153,14 @@ UJsonFieldData * UJsonFieldData::CreateFromJson(UObject * WorldContextObject, TS
 	return Json;
 }
 
+/**
+* Create a new instance of the UJsonFieldData class using a String, for use in Blueprint graphs.
+*
+* @param	WorldContextObject		The current context
+* @param	data		The JSON string to load
+*
+* @return	A pointer to the newly created post data
+*/
 UJsonFieldData* UJsonFieldData::CreateFromString(UObject* WorldContextObject, const FString& data)
 {
 	if (data.IsEmpty()) {
@@ -792,6 +810,13 @@ FName UJsonFieldData::GetName(const FString & key) const
 	return *str;
 }
 
+/**
+* Gets an array of Name for a given key
+*
+* @param	key						Key
+*
+* @return	Array of FName
+*/
 TArray<FName> UJsonFieldData::GetNameArray(const FString & key) const
 {
 	TArray<FName> stringArray;
@@ -812,6 +837,13 @@ TArray<FName> UJsonFieldData::GetNameArray(const FString & key) const
 	return stringArray;
 }
 
+/**
+* Gets a Byte for a given key
+*
+* @param	key						Key
+*
+* @return	Byte, 0 if missing
+*/
 uint8 UJsonFieldData::GetByte(const FString & key) const
 {
 	uint32 outByte;
@@ -825,6 +857,13 @@ uint8 UJsonFieldData::GetByte(const FString & key) const
 	return outByte;
 }
 
+/**
+* Gets an array of Bytes for a given key
+*
+* @param	key						Key
+*
+* @return	Array of Bytes
+*/
 TArray<uint8> UJsonFieldData::GetByteArray(const FString & key) const
 {
 	TArray<uint32> numberArray;
@@ -851,6 +890,13 @@ TArray<uint8> UJsonFieldData::GetByteArray(const FString & key) const
 	return outArray;
 }
 
+/**
+* Gets a a Boolean for a given key
+*
+* @param	key						Key
+*
+* @return	Boolean, false if missing
+*/
 bool UJsonFieldData::GetBool(const FString & key) const
 {
 
@@ -863,6 +909,13 @@ bool UJsonFieldData::GetBool(const FString & key) const
 	return Data->GetBoolField(key);
 }
 
+/**
+* Gets an array of Boolean for a given key
+*
+* @param	key						Key
+*
+* @return	Array of Booleans
+*/
 TArray<bool> UJsonFieldData::GetBoolArray(const FString & key) const
 {
 	TArray<bool> boolArray;
@@ -882,6 +935,13 @@ TArray<bool> UJsonFieldData::GetBoolArray(const FString & key) const
 	return boolArray;
 }
 
+/**
+* Gets a Number for a given key
+*
+* @param	key						Key
+*
+* @return	Float
+*/
 float UJsonFieldData::GetNumber(const FString & key) const
 {
 	double outNumber;
@@ -894,6 +954,13 @@ float UJsonFieldData::GetNumber(const FString & key) const
 	return outNumber;
 }
 
+/**
+* Gets an array of Number for a given key
+*
+* @param	key						Key
+*
+* @return	Array of Number
+*/
 TArray<float> UJsonFieldData::GetNumberArray(const FString & key) const
 {
 	TArray<float> numberArray;
@@ -989,7 +1056,13 @@ FTransform UJsonFieldData::GetTransform(const FString & key) const
 	return outTransform;
 }
 
-
+/**
+* Gets a Rottor for a given key
+*
+* @param	key						Key
+*
+* @return	FRotator, default if missing
+*/
 FRotator UJsonFieldData::GetRotator(const FString & key) const
 {
 	FRotator outRotator;
@@ -1003,7 +1076,13 @@ FRotator UJsonFieldData::GetRotator(const FString & key) const
 	return CreateRotator(*JsonObject);
 }
 
-
+/**
+* Gets a LinearColor for a given key
+*
+* @param	key						Key
+*
+* @return	FLinearColor, default if missing
+*/
 FLinearColor UJsonFieldData::GetColor(const FString & key) const
 {
 	const TSharedPtr<FJsonObject> *JsonObject;
@@ -1035,6 +1114,13 @@ TArray<FLinearColor> UJsonFieldData::GetColorArray(const FString & key) const
 	return OutColorArray;
 }
 
+/**
+* Gets an a Vector for a given key
+*
+* @param	key			Key
+*
+* @return	FVector, default if missing
+*/
 FVector UJsonFieldData::GetVector(const FString & key) const
 {
 	// Try to get the array field from the post data
@@ -1046,6 +1132,13 @@ FVector UJsonFieldData::GetVector(const FString & key) const
 	return CreateVector(*JsonObject);
 }
 
+/**
+* Gets an array of Vector for a given key
+*
+* @param	key						Key
+*
+* @return	Array of FVectors
+*/
 TArray<FVector> UJsonFieldData::GetVectorArray(const FString & key) const
 {
 	TArray<FVector> OutVectorArray;
@@ -1068,7 +1161,7 @@ TArray<FVector> UJsonFieldData::GetVectorArray(const FString & key) const
 *
 * @param	key						Key
 *
-* @return	Array of keys
+* @return	Array of string
 */
 TArray<FString> UJsonFieldData::GetObjectKeys() const 
 {
@@ -1092,6 +1185,12 @@ bool UJsonFieldData::HasKey(const FString& key) const
 	return Data->HasField(key);
 }
 
+
+/**
+* Check wheter or not all the keys are in the property list
+* @param	keys						Keys
+* @return	True if the key is in the property list
+*/
 bool UJsonFieldData::HasAllKeys(const TArray<FString>& keys) const
 {
 	bool check = true;
@@ -1104,15 +1203,28 @@ bool UJsonFieldData::HasAllKeys(const TArray<FString>& keys) const
 	return check;
 }
 
+/**
+* Remove the selected field from the dataset
+* @param	key						Key
+* @return	This
+*/
+UJsonFieldData* UJsonFieldData::RemoveKey(const FString& key)
+{
+	if (key.IsEmpty()) {
+		return this;
+	}
 
+	Data->RemoveField(key);
+	return this;
+}
 
 
 /**
-* Creates new data from the 
+* Creates new data from a given string
 *
-* @param	key			Key
+* @param	string			dataString
 *
-* @return	The requested string, empty if failed
+* @return	The requested JsonObject (this), empty if failed
 */
 UJsonFieldData* UJsonFieldData::FromString(const FString& dataString) {
 	TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(dataString);
@@ -1131,6 +1243,14 @@ UJsonFieldData* UJsonFieldData::FromString(const FString& dataString) {
 	return this;
 }
 
+/**
+* Creates new data from the compressend string
+*
+* @param	blob			CompressedData
+* @param	isValid			OUT Validity of operation
+*
+* @return	This
+*/
 UJsonFieldData * UJsonFieldData::FromCompressed(const TArray<uint8>& CompressedData,bool& bIsValid)
 {
 	TArray<TCHAR> UncompressedData;
@@ -1150,7 +1270,15 @@ UJsonFieldData * UJsonFieldData::FromCompressed(const TArray<uint8>& CompressedD
 	return this;
 }
 
-
+/**
+* Serialize a giver UObject into Json Object
+*
+* @param	key			Key
+* @param	UObject			Context
+* @param	bool			OUT Success
+*
+* @return	The requested string, empty if failed
+*/
 UObject* UJsonFieldData::GetUObjectField(const FString & Key, UObject* Context, bool& Success)
 {
 	check(Context);

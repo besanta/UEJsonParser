@@ -1,13 +1,16 @@
 /*
-Copyright 2018 Bright Night Games
+Copyright 2018-2021 Bright Night Games
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"), 
-to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+author: Santamaria Nicolas
+version: 1.0
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files(the "Software"),
+to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
 and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions :
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
@@ -231,6 +234,10 @@ public:
 	/* Check wheter or not the key is in the property list */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Has All Keys"), Category = "JSON")
 	bool HasAllKeys(const TArray<FString>& keys) const;
+
+	/* Remove the selected field from the dataset */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Remove Key"), Category = "JSON")
+	UJsonFieldData* RemoveKey(const FString& key);
 
 	/* Creates new data from the input string */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "From String"), Category = "JSON")
