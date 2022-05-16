@@ -132,11 +132,11 @@ public:
 	UJsonFieldData * SetTransform(const FString & key, FTransform value);
 
 	/* Sets nested object data to the post array */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Object Field"), Category = "JSON")
 	UJsonFieldData* SetObject(const FString& key, const UJsonFieldData* objectData);
 
 	/* Adds a new post data field to the specified data */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Data Array Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Object Array Field"), Category = "JSON")
 	UJsonFieldData* SetObjectArray(const FString& key, const TArray<UJsonFieldData*> arrayData);
 
 	/* Adds string data to the post data */
@@ -188,11 +188,11 @@ public:
 	TArray<float> GetNumberArray(const FString& key) const;
 
 	/* Fetches nested post data from the post data */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Data Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Object Field"), Category = "JSON")
 	UJsonFieldData* GetObject(const FString& key) const;
 
 	/* Gets an array with post data with the specified key */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Data Array Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Object Array Field"), Category = "JSON")
 	TArray<UJsonFieldData*> GetObjectArray(const FString& key) const;
 
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Transform Field"), Category = "JSON")
@@ -215,13 +215,16 @@ public:
 
 
 	/* Fetches nested post data from the post data */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Class Field"),Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Class Field"), Category = "JSON")
 	UClass* GetClass(const FString& key) const;
 
 	/* Gets an array with post data with the specified key */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Class Array Field"), Category = "JSON")
 	TArray<UClass*> GetClassArray(const FString& key) const;
 
+	/* Get a Texture from a base64 image */
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Texture Field"), Category = "JSON")
+	UTexture2D* GetTexture(const FString& key) const;
 	
 	/* Get all keys from the object */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get Object Keys"), Category = "JSON")
@@ -260,7 +263,7 @@ public:
 	
 	/* Adds Any data to the post data */
 	UFUNCTION(BlueprintPure, CustomThunk, meta = (DisplayName = "Add Any Field", CustomStructureParam = "Value"), Category = "JSON|Experimental")
-	UJsonFieldData* SetAnyProperty(const FString& Key, UProperty* Value);
+	UJsonFieldData* SetAnyProperty(const FString& Key, const int32& Value);
 
 	DECLARE_FUNCTION(execSetAnyProperty)
 	{
@@ -275,7 +278,7 @@ public:
 
 		UJsonFieldData* LocalContext = ExactCast<UJsonFieldData>(P_THIS_OBJECT);
 		if (LocalContext) {
-			WriteProperty(LocalContext->Data, Key, Property, DataPtr);
+			LocalContext->Data->SetField(Key, GetJsonValue(Property, DataPtr));
 		}
 
 		*(UJsonFieldData**)RESULT_PARAM = LocalContext;
@@ -288,13 +291,12 @@ private:
 
 	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const FStructProperty* StructProperty, const void* StructPtr);
 
+	static TArray<TSharedPtr<FJsonValue>> CreateJsonValueFromSet(const FSetProperty* StructProperty, const void* StructPtr);
 	static TArray<TSharedPtr<FJsonValue>> CreateJsonValueArray(const FArrayProperty* ArrayProperty, const void * InPropertyData);
+	static TSharedPtr<FJsonObject> CreateJsonValueFromMap(const FMapProperty* StructProperty, const void* StructPtr);
 
 	static TSharedPtr<FJsonValue> GetJsonValue(const FProperty * InProperty, const void * InPropertyData);
-	static bool SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty* Property, void* PropertyData);
-
-	static bool WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const FProperty* InProperty, const void* InPropertyData);
-
+	static bool SetJsonValueIntoProperty(TSharedPtr<FJsonValue> Value, const FProperty* Property, void* PropertyData);
 
 	FORCEINLINE static TSharedPtr<FJsonObject> CreateJSONVector(const FVector& value)
 	{

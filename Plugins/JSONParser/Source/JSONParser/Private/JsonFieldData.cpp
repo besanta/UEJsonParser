@@ -15,9 +15,10 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHO
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include "JsonFieldData.h"
+
+#include "ImageUtils.h"
 #include "Misc/Compression.h"
 #include "Engine/UserDefinedEnum.h"
-
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Policies/PrettyJsonPrintPolicy.h"
 #include "Serialization/JsonWriter.h"
@@ -273,11 +274,16 @@ UJsonFieldData* UJsonFieldData::SetString(const FString& key, const FString& val
 */
 UJsonFieldData* UJsonFieldData::SetObject(const FString& key, const UJsonFieldData* objectData) {
 	
-	if (!Data.IsValid() || key.IsEmpty() || !objectData) {
+	if (!Data.IsValid() || key.IsEmpty()) {
+		return this;
+	}
+
+	if (!objectData) {
+		Data->SetField(key, TSharedPtr<FJsonValueNull>(new FJsonValueNull()));
 		return this;
 	}
 	
-	Data->SetObjectField(*key, objectData->Data);
+	Data->SetObjectField(key, objectData->Data);
 	return this;
 }
 
@@ -701,7 +707,7 @@ UJsonFieldData* UJsonFieldData::GetObject(const FString& key) const
 	const TSharedPtr<FJsonObject> *outPtr;
 	if (!Data->TryGetObjectField(*key, outPtr)) {
 		// Throw an error and return NULL when the key could not be found
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Object is missing!"), *key);
 		return NULL;
 	}
 
@@ -719,7 +725,7 @@ UClass * UJsonFieldData::GetClass(const FString & key) const
 	
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetStringField(*key, classPath)) {
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Class is missing!"), *key);
 		return nullptr;
 	}
 	
@@ -735,7 +741,7 @@ TArray<UClass*> UJsonFieldData::GetClassArray(const FString & key) const
 	// Try to get the array field from the post data
 	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
 	if (!Data->TryGetArrayField(*key, arrayPtr)) {
-		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Class[] is missing!"), *key);
 		return classArray;
 	}
 	
@@ -750,6 +756,37 @@ TArray<UClass*> UJsonFieldData::GetClassArray(const FString & key) const
 	return classArray;
 }
 
+UTexture2D* UJsonFieldData::GetTexture(const FString& key) const
+{
+	FString Source;
+	TArray<uint8> data_buffer;
+	FString Left, Right;
+
+	if (!Data->TryGetStringField(key, Source)) {
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Texture is missing!"), *key);
+		return nullptr;
+	}
+	
+	// you need to remove Data:image....,
+	Source.Split(TEXT(","), &Left, &Right);
+	if (Right.IsEmpty()) {
+		return nullptr;
+	}
+
+	bool isDecode = FBase64::Decode(Right, data_buffer);
+	if (!isDecode) {
+		return nullptr;
+	}
+
+	UTexture2D * Texture = FImageUtils::ImportBufferAsTexture2D(data_buffer);
+	//Texture->CompressionSettings = TextureCompressionSettings::TC_VectorDisplacementmap;
+	// Texture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
+	//Texture->SRGB = false;
+	Texture->Filter = TextureFilter::TF_Nearest;
+	Texture->UpdateResource();
+	return Texture;
+}
+
 /**
 * Tries to get a string from the field data by key, returns the string when successful
 *
@@ -762,7 +799,7 @@ FString UJsonFieldData::GetString(const FString& key) const {
 
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetStringField(key, outString)) {
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type String is missing!"), *key);
 		return "";
 	}
 
@@ -783,7 +820,7 @@ TArray<FString> UJsonFieldData::GetStringArray(const FString& key) const
 	// Try to get the array field from the post data
 	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
 	if (!Data->TryGetArrayField(key, arrayPtr)) {
-		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type String[] is missing!"), *key);
 		return stringArray;
 	}
 	
@@ -803,7 +840,7 @@ FName UJsonFieldData::GetName(const FString & key) const
 
 	// If the current post data isn't valid, return an empty string
 	if (!Data->TryGetStringField(*key, str)) {
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' not found in the field data!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Name is missing!"), *key);
 		return "";
 	}
 
@@ -824,7 +861,7 @@ TArray<FName> UJsonFieldData::GetNameArray(const FString & key) const
 	// Try to get the array field from the post data
 	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
 	if (!Data->TryGetArrayField(*key, arrayPtr)) {
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Name is missing !"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Name[] is missing!"), *key);
 		return stringArray;
 	}
 
@@ -1303,7 +1340,7 @@ UObject* UJsonFieldData::GetUObjectField(const FString & Key, UObject* Context, 
 		
 		if (FoundProperty)
 		{
-			SetJsonValue(Value, FoundProperty, PropertyData);
+			SetJsonValueIntoProperty(Value, FoundProperty, PropertyData);
 		}
 	}
 	Success = true;
@@ -1332,7 +1369,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObjectProperty(const
 			const void* ValuePtr = Property->ContainerPtrToValuePtr<const void>(Value, ArrayIndex);
 
 			// Parse this property
-			WriteProperty(JsonObject, Property->GetFName().ToString(), Property, ValuePtr);
+			JsonObject->SetField(Property->GetFName().ToString(), GetJsonValue(Property, ValuePtr));
 		}
 	}
 
@@ -1356,7 +1393,8 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromUObject(const UObject
 			// This grabs the pointer to where the property value is stored
 			const void* ValuePtr = Property->ContainerPtrToValuePtr<const void>(InObject, ArrayIndex);
 
-			WriteProperty(JsonObject, Property->GetFName().ToString(), Property, ValuePtr);
+			//WritePropertyToJson(JsonObject, Property->GetFName().ToString(), Property, ValuePtr);
+			JsonObject->SetField(Property->GetFName().ToString(), GetJsonValue(Property, ValuePtr));
 		}
 	}
 
@@ -1388,13 +1426,72 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const FStructP
 
 			// Parse this property
 			//ParseProperty(Property, ValuePtr);
-			WriteProperty(JsonStruct, Property->GetFName().ToString(), Property, ValuePtr);
+			//WritePropertyToJson(JsonStruct, Property->GetFName().ToString(), Property, ValuePtr);
+			JsonStruct->SetField(Property->GetFName().ToString(), GetJsonValue(Property, ValuePtr));
+
 		}
 	}
 
 
 	return JsonStruct;
 }
+
+TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromMap(const FMapProperty* MapProperty, const void* MapPtr)
+{
+
+	TSharedPtr<FJsonObject> JsonMapObject = MakeShareable(new FJsonObject());
+
+	FScriptMapHelper MapHelper(MapProperty, MapPtr);
+
+	for (auto i = MapHelper.CreateIterator(); i;  ++i) 
+	{
+		FString HashString;
+
+		if (MapHelper.IsValidIndex(*i))
+		{
+			const auto KeyElement = GetJsonValue(MapProperty->KeyProp, MapHelper.GetKeyPtr(*i));
+			const auto ValueElement = GetJsonValue(MapProperty->ValueProp, MapHelper.GetValuePtr(*i));
+			
+			MapProperty->KeyProp->ExportTextItem(HashString, MapHelper.GetKeyPtr(*i), nullptr, nullptr, 0);
+			if (HashString.IsEmpty())
+			{
+				UE_LOG(LogJson, Warning, TEXT("Unable to convert key to string for property %s."), *MapProperty->GetName())
+				HashString = FString::Printf(TEXT("_key_%d"), *i);
+				continue;
+			}
+
+			JsonMapObject->SetField(HashString, ValueElement);
+
+/*
+			if (KeyElement.IsValid() && ValueElement.IsValid())
+			{
+				HashString = KeyElement->AsString();
+				if (HashString.IsEmpty())
+				{
+					MapProperty->KeyProp->ExportTextItem(HashString, MapHelper.GetKeyPtr(*i), nullptr, nullptr, 0);
+					if (HashString.IsEmpty())
+					{
+						UE_LOG(LogJson, Warning, TEXT("Unable to convert key to string for property %s."), *MapProperty->GetName())
+						HashString = FString::Printf(TEXT("_key_%d"), *i);
+					}
+				}
+
+				JsonMapObject->SetField(HashString, ValueElement);
+			}*/
+
+			/*const auto KeyValue = MapHelper.GetKeyProperty()->GetFName().ToString();
+			const auto JsonValue = GetJsonValue(MapHelper.GetValueProperty(), MapValueData);
+			JsonMapObject->SetField(HashString, JsonValue);*/
+		}
+	}
+
+	return JsonMapObject;
+}
+TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueFromSet(const FSetProperty* StructProperty, const void* StructPtr) {
+	TArray<TSharedPtr<FJsonValue>> dataArray = TArray<TSharedPtr<FJsonValue>>();
+	return dataArray;
+}
+
 
 TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArrayProperty* ArrayProperty, const void* InPropertyData)
 {
@@ -1412,32 +1509,32 @@ TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArray
 #endif
 	for (int32 i = 0; i < ArrayHelper.Num(); i++) 
 	{
-		if (auto BoolInnerProp = Cast<FBoolProperty>(ArrayProperty->Inner)) {
+		if (auto BoolInnerProp = CastField<FBoolProperty>(ArrayProperty->Inner)) {
 			auto InnerValue = BoolInnerProp->GetPropertyValue(ArrayHelper.GetRawPtr(i));
 			auto JsonValue = MakeShareable(new FJsonValueBoolean(InnerValue));
 			dataArray.Add(JsonValue);
 		}
-		else if (auto ObjectInnerProp = Cast<FObjectProperty>(ArrayProperty->Inner))
+		else if (auto ObjectInnerProp = CastField<FObjectProperty>(ArrayProperty->Inner))
 		{
 			UObject* Object = ObjectInnerProp->GetObjectPropertyValue(ArrayHelper.GetRawPtr(i));
 			auto JsonObject = CreateJsonValueFromUObject(Object);
 			auto JsonValue = MakeShareable(new FJsonValueObject(JsonObject));
 			dataArray.Add(JsonValue);
 		}
-		else if (auto StrInnerProp = Cast<FStrProperty>(ArrayProperty->Inner))
+		else if (auto StrInnerProp = CastField<FStrProperty>(ArrayProperty->Inner))
 		{
 			auto InnerValue = StrInnerProp->GetPropertyValue(ArrayHelper.GetRawPtr(i));
 			auto JsonValue = MakeShareable(new FJsonValueString(InnerValue));
 			dataArray.Add(JsonValue);
 		}
-		else if (auto NumericInnerProp = Cast<FNumericProperty>(ArrayProperty->Inner)) {
+		else if (auto NumericInnerProp = CastField<FNumericProperty>(ArrayProperty->Inner)) {
 			auto InnerValue = NumericInnerProp->GetFloatingPointPropertyValue(ArrayHelper.GetRawPtr(i));
 			auto JsonValue = MakeShareable(new FJsonValueNumber(InnerValue));
 			dataArray.Add(JsonValue);
 		}
-		else if (auto StructProperty = Cast<FStructProperty>(ArrayProperty->Inner)) {
+		else if (auto StructProperty = CastField<FStructProperty>(ArrayProperty->Inner)) {
 			//TSharedPtr<FJsonObject> Value = CreateJsonValueFromStruct(Cast<FStructProperty>(StructProperty), InPropertyData);
-			TSharedPtr<FJsonObject> Value = CreateJsonValueFromStruct(Cast<FStructProperty>(StructProperty), ArrayHelper.GetRawPtr(i));
+			TSharedPtr<FJsonObject> Value = CreateJsonValueFromStruct(StructProperty, ArrayHelper.GetRawPtr(i));
 			auto JsonValue = MakeShareable(new FJsonValueObject(Value));
 
 			dataArray.Add(JsonValue);
@@ -1449,37 +1546,9 @@ TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArray
 	return dataArray;
 }
 
-bool UJsonFieldData::WriteProperty(TSharedPtr<FJsonObject> JsonWriter, const FString& Identifier, const FProperty* InProperty, const void* InPropertyData)
-{
-	if (!InProperty) return false;
-
-	if (auto StructProp = Cast<const FStructProperty>(InProperty))
-	{
-		TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp, InPropertyData);
-		JsonWriter->SetObjectField(Identifier, JsonStruct);
-	}
-	else if (auto objectProperty = Cast<const FObjectProperty>(InProperty))
-	{
-		TSharedPtr<FJsonObject> JsonValue = CreateJsonValueFromUObjectProperty(objectProperty, InPropertyData);
-		JsonWriter->SetObjectField(Identifier, JsonValue);
-	}
-	else if (auto ArrayProp = Cast<const FArrayProperty>(InProperty))
-	{
-		FProperty* innerProp = ArrayProp->Inner;
-		TArray<TSharedPtr<FJsonValue>> dataArray = CreateJsonValueArray(ArrayProp, InPropertyData);
-		JsonWriter->SetArrayField(Identifier, dataArray);
-	}
-	else {
-		JsonWriter->SetField(Identifier, GetJsonValue(InProperty, InPropertyData));
-	}
-	
-
-	return true;
-}
-
 TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InProperty, const void * InPropertyData)
 {
-	if (const FEnumProperty* EnumProperty = Cast<const FEnumProperty>(InProperty))
+	if (const FEnumProperty* EnumProperty = CastField<const FEnumProperty>(InProperty))
 	{
 		UEnum* Enum = EnumProperty->GetEnum();
 		int64 Val = EnumProperty->GetUnderlyingProperty()->GetSignedIntPropertyValue(InPropertyData);
@@ -1490,15 +1559,15 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 		}
 		return MakeShareable(new FJsonValueNumber(Val));
 	}
-	else if (const FStrProperty* StrProperty = Cast<FStrProperty>(InProperty))
+	else if (const FStrProperty* StrProperty = CastField<FStrProperty>(InProperty))
 	{
 		auto Value = StrProperty->GetPropertyValue(InPropertyData);
 		return MakeShareable(new FJsonValueString(Value));
 	}
-	else if (const FNumericProperty *NumericProperty = Cast<const FNumericProperty>(InProperty))
+	else if (const FNumericProperty *NumericProperty = CastField<const FNumericProperty>(InProperty))
 	{
 		//if (NumericProperty->IsEnum())
-		if (const FByteProperty* ByteProperty = Cast<const FByteProperty>(InProperty))
+		if (const FByteProperty* ByteProperty = CastField<const FByteProperty>(InProperty))
 		{
 			int64 Val = ByteProperty->GetSignedIntPropertyValue(InPropertyData);
 			if (UUserDefinedEnum* UDEnum = Cast<UUserDefinedEnum>(ByteProperty->Enum))
@@ -1519,12 +1588,12 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 			return MakeShareable(new FJsonValueNumber(IntValue));
 		}
 	}
-	else if (const FBoolProperty* BoolProp = Cast<const FBoolProperty>(InProperty))
+	else if (const FBoolProperty* BoolProp = CastField<const FBoolProperty>(InProperty))
 	{
 		const bool PropertyValue = BoolProp->GetPropertyValue(InPropertyData);
 		return MakeShareable(new FJsonValueBoolean(PropertyValue));
 	}
-	else if (const FClassProperty* ClassProp = Cast<const FClassProperty>(InProperty))
+	else if (const FClassProperty* ClassProp = CastField<const FClassProperty>(InProperty))
 	{
 		UObject* PropertyValue = ClassProp->GetPropertyValue(InPropertyData);
 		if (PropertyValue)
@@ -1533,7 +1602,7 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 			return MakeShareable(new FJsonValueString(className));
 		}
 	}
-	else if (const FArrayProperty* ArrayProp = Cast<const FArrayProperty>(InProperty))
+	else if (const FArrayProperty* ArrayProp = CastField<const FArrayProperty>(InProperty))
 	{
 		TArray< TSharedPtr<FJsonValue> > ValueArray;
 
@@ -1547,20 +1616,19 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 		}
 		return MakeShareable(new FJsonValueArray(ValueArray));
 	}
-	//else if (auto StructProp = Cast<const FStructProperty>(InProperty))
-	//{
-	//	TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp, InPropertyData);
-	//	return MakeShareable(new FJsonValueObject(JsonStruct));
-	//}
-	//else if (auto objectProperty = Cast<UObjectProperty>(InProperty))
-	//{
-	//	TSharedPtr<FJsonObject> JsonObject = CreateJsonValueFromUObjectProperty(objectProperty, InPropertyData);
-	//	return MakeShareable(new FJsonValueObject(JsonObject));
-	//}
-
-	/*else if (const USetProperty* SetProp = Cast<const USetProperty>(InProperty))
+	else if (const auto StructProp = CastField<const FStructProperty>(InProperty))
 	{
-		JsonWriter->WriteArrayStart(Identifier);
+		TSharedPtr<FJsonObject> JsonStruct = CreateJsonValueFromStruct(StructProp, InPropertyData);
+		return MakeShareable(new FJsonValueObject(JsonStruct));
+	}
+	else if (const auto objectProperty = CastField<FObjectProperty>(InProperty))
+	{
+		TSharedPtr<FJsonObject> JsonObject = CreateJsonValueFromUObjectProperty(objectProperty, InPropertyData);
+		return MakeShareable(new FJsonValueObject(JsonObject));
+	}
+	else if (const auto SetProp = CastField<const FSetProperty>(InProperty))
+	{
+		/*JsonWriter->WriteArrayStart(Identifier);
 
 		FScriptSetHelper SetHelper(SetProp, InPropertyData);
 		for (int32 SetSparseIndex = 0; SetSparseIndex < SetHelper.GetMaxIndex(); ++SetSparseIndex)
@@ -1572,28 +1640,11 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 			}
 		}
 
-		JsonWriter->WriteArrayEnd();
-	}*/
-	else if (const FMapProperty* MapProp = Cast<const FMapProperty>(InProperty))
+		JsonWriter->WriteArrayEnd();*/
+	}
+	else if (const FMapProperty* MapProp = CastField<const FMapProperty>(InProperty))
 	{
-		TSharedPtr<FJsonObject> JsonMapObject = MakeShareable(new FJsonObject());
-
-		FScriptMapHelper MapHelper(MapProp, InPropertyData);
-		for (int32 MapSparseIndex = 0; MapSparseIndex < MapHelper.GetMaxIndex(); ++MapSparseIndex)
-		{
-			if (MapHelper.IsValidIndex(MapSparseIndex))
-			{
-				const uint8* MapKeyData = MapHelper.GetKeyPtr(MapSparseIndex);
-				const uint8* MapValueData = MapHelper.GetValuePtr(MapSparseIndex);
-
-				// JSON object keySuces must always be strings
-				//const FString KeyValue = DataTableUtils::GetPropertyValueAsStringDirect(MapHelper.GetKeyProperty(), (uint8*)MapKeyData, DTExportFlags);
-				//WriteContainerEntry(MapHelper.GetValueProperty(), MapValueData, &KeyValue);
-				const FString KeyValue = MapHelper.GetKeyProperty()->GetFName().ToString();
-				WriteProperty(JsonMapObject, KeyValue, MapHelper.GetValueProperty(), MapValueData);
-			}
-		}
-
+		TSharedPtr<FJsonObject> JsonMapObject = CreateJsonValueFromMap(MapProp, InPropertyData);
 		return MakeShareable(new FJsonValueObject(JsonMapObject));
 	}
 
@@ -1601,15 +1652,15 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 	return MakeShareable(new FJsonValueNull());
 }
 
-bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty * Property, void * PropertyData)
+bool UJsonFieldData::SetJsonValueIntoProperty(TSharedPtr<FJsonValue> Value, const FProperty * Property, void * PropertyData)
 {
 	check(Property);
 	check(PropertyData);
 
-	if (const FNumericProperty *NumericProperty = Cast<const FNumericProperty>(Property))
+	if (const FNumericProperty *NumericProperty = CastField<const FNumericProperty>(Property))
 	{
 		//if (NumericProperty->IsEnum())
-		if (const FByteProperty* ByteProperty = Cast<const FByteProperty>(Property))
+		if (const FByteProperty* ByteProperty = CastField<const FByteProperty>(Property))
 		{
 			if (UUserDefinedEnum* UDEnum = Cast<UUserDefinedEnum>(ByteProperty->Enum))
 			{
@@ -1629,7 +1680,7 @@ bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty 
 			//UE_LOG(LogJson, Log, TEXT("Try unserial property %s value %d"), *ValueKey, Value);
 		}
 	}
-	else if (const FStructProperty* StructProp = Cast<const FStructProperty>(Property))
+	else if (const FStructProperty* StructProp = CastField<const FStructProperty>(Property))
 	{
 		UStruct* Struct = StructProp->Struct;
 
@@ -1646,7 +1697,7 @@ bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty 
 			if (FoundProperty)
 			{
 				void* FoundPropertyData = FoundProperty->ContainerPtrToValuePtr<uint8>(PropertyData);
-				SetJsonValue(JStructValue, FoundProperty, FoundPropertyData);
+				SetJsonValueIntoProperty(JStructValue, FoundProperty, FoundPropertyData);
 			}
 			else 
 			{
@@ -1654,7 +1705,7 @@ bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty 
 			}
 		}
 	}
-	else if (const FObjectProperty* ObjectProperty = Cast<const FObjectProperty>(Property))
+	else if (const FObjectProperty* ObjectProperty = CastField<const FObjectProperty>(Property))
 	{
 		TSharedPtr<FJsonObject> JsonObject = Value->AsObject();
 
@@ -1676,7 +1727,7 @@ bool UJsonFieldData::SetJsonValue(TSharedPtr<FJsonValue> Value, const FProperty 
 			if (FoundProperty)
 			{
 				void* FoundPropertyData = FoundProperty->ContainerPtrToValuePtr<uint8>(PropertyData);
-				SetJsonValue(JObjectValue, FoundProperty, FoundPropertyData);
+				SetJsonValueIntoProperty(JObjectValue, FoundProperty, FoundPropertyData);
 			}
 			else
 			{
