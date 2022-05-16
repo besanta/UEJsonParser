@@ -671,22 +671,14 @@ UJsonFieldData * UJsonFieldData::SetRotator(const FString & key, FRotator value)
 */
 UJsonFieldData * UJsonFieldData::SetTransform(const FString & key, FTransform value)
 {
-	TArray<TSharedPtr<FJsonValue>> *transformArray = new TArray<TSharedPtr<FJsonValue>>();
 
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetLocation().X)));
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetLocation().Y)));
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetLocation().Z)));
+	if (key.IsEmpty()) {
+		return this;
+	}
 
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().X)));
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().Y)));
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().Z)));
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetRotation().W)));
+	TSharedPtr<FJsonObject> JsonObject = CreateJSONTransform(value);
+	Data->SetObjectField(key, JsonObject);
 
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetScale3D().X)));
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetScale3D().Y)));
-	transformArray->Add(MakeShareable(new FJsonValueNumber(value.GetScale3D().Z)));
-
-	Data->SetArrayField(*key, *transformArray);
 	return this;
 }
 
@@ -1053,41 +1045,51 @@ FTransform UJsonFieldData::GetTransform(const FString & key) const
 {
 	FTransform outTransform;
 
-	const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
-	if (Data->TryGetArrayField(*key, arrayPtr))
+	const TSharedPtr<FJsonObject> *JsonObject;
+
+	if (!Data->TryGetObjectField(key, JsonObject))
 	{
-		// Iterate through the array and use the string value from all the entries
-		if (arrayPtr->Num() == 10)
-		{
-			FVector loc = FVector(
-				((*arrayPtr)[0]->AsNumber()),
-				((*arrayPtr)[1]->AsNumber()),
-				((*arrayPtr)[2]->AsNumber())
-			);
-
-			FQuat quat = FQuat(
-				((*arrayPtr)[3]->AsNumber()),
-				((*arrayPtr)[4]->AsNumber()),
-				((*arrayPtr)[5]->AsNumber()),
-				((*arrayPtr)[6]->AsNumber())
-			);
-
-			FVector scale = FVector(
-				((*arrayPtr)[7]->AsNumber()),
-				((*arrayPtr)[8]->AsNumber()),
-				((*arrayPtr)[9]->AsNumber())
-			);
-			outTransform = FTransform(quat, loc, scale);
-
-		}
-		else {
-			UE_LOG(LogJson, Warning, TEXT("Entry '%s' is not a Transform!"), *key);
-		}
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Transform is missing !"), *key);
+		return outTransform;
 	}
-	else {
-		// Throw an error when the entry could not be found in the field data
-		UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
-	}
+
+	outTransform = CreateTransformFromJson(*JsonObject);
+
+	//const TArray<TSharedPtr<FJsonValue>> *arrayPtr;
+	//if (Data->TryGetArrayField(*key, arrayPtr))
+	//{
+	//	// Iterate through the array and use the string value from all the entries
+	//	if (arrayPtr->Num() == 10)
+	//	{
+	//		FVector loc = FVector(
+	//			((*arrayPtr)[0]->AsNumber()),
+	//			((*arrayPtr)[1]->AsNumber()),
+	//			((*arrayPtr)[2]->AsNumber())
+	//		);
+
+	//		FQuat quat = FQuat(
+	//			((*arrayPtr)[3]->AsNumber()),
+	//			((*arrayPtr)[4]->AsNumber()),
+	//			((*arrayPtr)[5]->AsNumber()),
+	//			((*arrayPtr)[6]->AsNumber())
+	//		);
+
+	//		FVector scale = FVector(
+	//			((*arrayPtr)[7]->AsNumber()),
+	//			((*arrayPtr)[8]->AsNumber()),
+	//			((*arrayPtr)[9]->AsNumber())
+	//		);
+	//		outTransform = FTransform(quat, loc, scale);
+
+	//	}
+	//	else {
+	//		UE_LOG(LogJson, Warning, TEXT("Entry '%s' is not a Transform!"), *key);
+	//	}
+	//}
+	//else {
+	//	// Throw an error when the entry could not be found in the field data
+	//	UE_LOG(LogJson, Warning, TEXT("Array entry '%s' not found in the field data!"), *key);
+	//}
 
 
 	return outTransform;
@@ -1461,42 +1463,50 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromMap(const FMapPropert
 			}
 
 			JsonMapObject->SetField(HashString, ValueElement);
-
-/*
-			if (KeyElement.IsValid() && ValueElement.IsValid())
-			{
-				HashString = KeyElement->AsString();
-				if (HashString.IsEmpty())
-				{
-					MapProperty->KeyProp->ExportTextItem(HashString, MapHelper.GetKeyPtr(*i), nullptr, nullptr, 0);
-					if (HashString.IsEmpty())
-					{
-						UE_LOG(LogJson, Warning, TEXT("Unable to convert key to string for property %s."), *MapProperty->GetName())
-						HashString = FString::Printf(TEXT("_key_%d"), *i);
-					}
-				}
-
-				JsonMapObject->SetField(HashString, ValueElement);
-			}*/
-
-			/*const auto KeyValue = MapHelper.GetKeyProperty()->GetFName().ToString();
-			const auto JsonValue = GetJsonValue(MapHelper.GetValueProperty(), MapValueData);
-			JsonMapObject->SetField(HashString, JsonValue);*/
 		}
 	}
 
 	return JsonMapObject;
 }
-TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueFromSet(const FSetProperty* StructProperty, const void* StructPtr) {
-	TArray<TSharedPtr<FJsonValue>> dataArray = TArray<TSharedPtr<FJsonValue>>();
-	return dataArray;
+
+TSharedPtr<FJsonValueArray> UJsonFieldData::CreateJsonValueFromSet(const FSetProperty* SetProperty, const void* SetPtr)
+{
+	TArray< TSharedPtr<FJsonValue> > ValueArray;
+	FScriptSetHelper SetHelper(SetProperty, SetPtr);
+	for (auto It = SetHelper.CreateIterator(); It;  ++It)
+	{
+		if (SetHelper.IsValidIndex(*It))
+		{
+			const uint8* SetEntryData = SetHelper.GetElementPtr(*It);
+			if (SetEntryData) 
+			{
+				TSharedPtr<FJsonValue> jval = GetJsonValue(SetHelper.GetElementProperty(), SetEntryData);
+				ValueArray.Add(jval);
+			}
+		}
+	}
+	return MakeShareable(new FJsonValueArray(ValueArray));
 }
 
-
-TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArrayProperty* ArrayProperty, const void* InPropertyData)
+TSharedPtr<FJsonValueArray> UJsonFieldData::CreateJsonValueFromArray(const FArrayProperty* ArrayProperty, const void* InPropertyData)
 {
+	TArray<TSharedPtr<FJsonValue>> ValueArray;
 	FScriptArrayHelper ArrayHelper(ArrayProperty, InPropertyData);
-	TArray<TSharedPtr<FJsonValue>> dataArray = TArray<TSharedPtr<FJsonValue>>();
+
+	for (int32 SparseIndex = 0; SparseIndex < ArrayHelper.Num(); ++SparseIndex)
+	{
+		if (ArrayHelper.IsValidIndex(SparseIndex))
+		{
+			const uint8* ArrayEntryData = ArrayHelper.GetRawPtr(SparseIndex);
+			if (ArrayEntryData) 
+			{
+				TSharedPtr<FJsonValue> jval = GetJsonValue(ArrayProperty->Inner, ArrayEntryData);
+				ValueArray.Add(jval);
+			}
+		}
+}
+	return MakeShareable(new FJsonValueArray(ValueArray));
+
 #if 0
 	if (ArrayProperty)
 	{
@@ -1506,7 +1516,6 @@ TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArray
 			UObject* Object = InnerProp->GetObjectPropertyValue(ArrayHelper.GetRawPtr(Property.Index));
 		}
 	}
-#endif
 	for (int32 i = 0; i < ArrayHelper.Num(); i++) 
 	{
 		if (auto BoolInnerProp = CastField<FBoolProperty>(ArrayProperty->Inner)) {
@@ -1544,6 +1553,8 @@ TArray<TSharedPtr<FJsonValue>> UJsonFieldData::CreateJsonValueArray(const FArray
 		}*/
 	}
 	return dataArray;
+#endif
+
 }
 
 TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InProperty, const void * InPropertyData)
@@ -1604,6 +1615,9 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 	}
 	else if (const FArrayProperty* ArrayProp = CastField<const FArrayProperty>(InProperty))
 	{
+		auto Array = CreateJsonValueFromArray(ArrayProp, InPropertyData);
+		return Array;
+/*
 		TArray< TSharedPtr<FJsonValue> > ValueArray;
 
 		FScriptArrayHelper ArrayHelper(ArrayProp, InPropertyData);
@@ -1614,7 +1628,7 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 
 			ValueArray.Add(jval);
 		}
-		return MakeShareable(new FJsonValueArray(ValueArray));
+		return MakeShareable(new FJsonValueArray(ValueArray));*/
 	}
 	else if (const auto StructProp = CastField<const FStructProperty>(InProperty))
 	{
@@ -1628,19 +1642,8 @@ TSharedPtr<FJsonValue>  UJsonFieldData::GetJsonValue(const FProperty * InPropert
 	}
 	else if (const auto SetProp = CastField<const FSetProperty>(InProperty))
 	{
-		/*JsonWriter->WriteArrayStart(Identifier);
-
-		FScriptSetHelper SetHelper(SetProp, InPropertyData);
-		for (int32 SetSparseIndex = 0; SetSparseIndex < SetHelper.GetMaxIndex(); ++SetSparseIndex)
-		{
-			if (SetHelper.IsValidIndex(SetSparseIndex))
-			{
-				const uint8* SetEntryData = SetHelper.GetElementPtr(SetSparseIndex);
-				WriteContainerEntry(SetHelper.GetElementProperty(), SetEntryData);
-			}
-		}
-
-		JsonWriter->WriteArrayEnd();*/
+		auto JsonSet = CreateJsonValueFromSet(SetProp, InPropertyData);
+		return JsonSet;
 	}
 	else if (const FMapProperty* MapProp = CastField<const FMapProperty>(InProperty))
 	{

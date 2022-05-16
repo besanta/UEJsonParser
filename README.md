@@ -12,6 +12,7 @@ Easy way to read, create and manipulate JSON in Blueprints.
 * Compress JSON string (Archive). Read form archived JSON string.
 * Read From File (Async)
 * GET from HTTP (Async)
+* Get Texture from Data64 string.
 * Include C++ Source for C++ Projects.
 
 # TODO

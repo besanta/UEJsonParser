@@ -119,16 +119,16 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Vector Field"), Category = "JSON")
 	UJsonFieldData * SetVector(const FString & key, FVector value);
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Vector Array Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Vector Array Field"), Category = "JSON")
 	UJsonFieldData * SetVectorArray(const FString & key, const TArray<FVector>& arrayData);
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Color Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Color Field"), Category = "JSON")
 	UJsonFieldData * SetColor(const FString & key, const FLinearColor& value);
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Rotator Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Rotator Field"), Category = "JSON")
 	UJsonFieldData * SetRotator(const FString & key, FRotator value);
 	
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Transform Field", DeprecatedFunction, DeprecationMessage = "Use Add Any Field"), Category = "JSON")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add Transform Field"), Category = "JSON")
 	UJsonFieldData * SetTransform(const FString & key, FTransform value);
 
 	/* Sets nested object data to the post array */
@@ -255,14 +255,14 @@ public:
 	UJsonFieldData* FromCompressed(const TArray<uint8>& CompressedData, bool& bIsValid);
 
 	/* Adds UObject data to the post data */
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON|Experimental")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Add UObject Field"), Category = "JSON")
 	UJsonFieldData* SetUObject(const FString& key, const UObject* value);
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get UObject Field"), Category = "JSON|Experimental")
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "Get UObject Field"), Category = "JSON")
 	UObject* GetUObjectField(const FString& Key, UObject* Context, bool& Success);
 	
 	/* Adds Any data to the post data */
-	UFUNCTION(BlueprintPure, CustomThunk, meta = (DisplayName = "Add Any Field", CustomStructureParam = "Value"), Category = "JSON|Experimental")
+	UFUNCTION(BlueprintPure, CustomThunk, meta = (DisplayName = "Add Any Field", CustomStructureParam = "Value"), Category = "JSON")
 	UJsonFieldData* SetAnyProperty(const FString& Key, const int32& Value);
 
 	DECLARE_FUNCTION(execSetAnyProperty)
@@ -291,8 +291,8 @@ private:
 
 	static TSharedPtr<FJsonObject> CreateJsonValueFromStruct(const FStructProperty* StructProperty, const void* StructPtr);
 
-	static TArray<TSharedPtr<FJsonValue>> CreateJsonValueFromSet(const FSetProperty* StructProperty, const void* StructPtr);
-	static TArray<TSharedPtr<FJsonValue>> CreateJsonValueArray(const FArrayProperty* ArrayProperty, const void * InPropertyData);
+	static TSharedPtr<FJsonValueArray> CreateJsonValueFromSet(const FSetProperty* SetProperty, const void* SetPtr);
+	static TSharedPtr<FJsonValueArray> CreateJsonValueFromArray(const FArrayProperty* ArrayProperty, const void * InPropertyData);
 	static TSharedPtr<FJsonObject> CreateJsonValueFromMap(const FMapProperty* StructProperty, const void* StructPtr);
 
 	static TSharedPtr<FJsonValue> GetJsonValue(const FProperty * InProperty, const void * InPropertyData);
@@ -372,12 +372,72 @@ private:
 			)
 		{
 			return FRotator(
-				JsonObject->GetNumberField("Yaw"),
 				JsonObject->GetNumberField("Pitch"),
+				JsonObject->GetNumberField("Yaw"),
 				JsonObject->GetNumberField("Roll")
 			);
 		}
 
 		return FRotator();
+	}
+
+	FORCEINLINE static TSharedPtr<FJsonObject> CreateJSONQuat(const FQuat& Value)
+	{
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+		JsonObject->SetNumberField("X", Value.X);
+		JsonObject->SetNumberField("Y", Value.Y);
+		JsonObject->SetNumberField("Z", Value.Z);
+		JsonObject->SetNumberField("W", Value.W);
+
+		return JsonObject;
+	}
+
+	FORCEINLINE static FQuat CreateQuatFromJson(const TSharedPtr<FJsonObject> JsonObject)
+	{
+		if (JsonObject->HasTypedField<EJson::Number>("X")
+			&& JsonObject->HasTypedField<EJson::Number>("Y")
+			&& JsonObject->HasTypedField<EJson::Number>("Z")
+			&& JsonObject->HasTypedField<EJson::Number>("W")
+			)
+		{
+			return FQuat(
+				JsonObject->GetNumberField("X"),
+				JsonObject->GetNumberField("Y"),
+				JsonObject->GetNumberField("Z"),
+				JsonObject->GetNumberField("W")
+			);
+		}
+
+		return FQuat();
+	}
+
+	FORCEINLINE static TSharedPtr<FJsonObject> CreateJSONTransform(const FTransform& Value)
+	{
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+		auto Translation = CreateJSONVector(Value.GetTranslation());
+		auto Rotation = CreateJSONQuat(Value.GetRotation());
+		auto Scale3D = CreateJSONVector(Value.GetScale3D());
+		JsonObject->SetObjectField("Rotation", Rotation);
+		JsonObject->SetObjectField("Translation", Translation);
+		JsonObject->SetObjectField("Scale3D", Scale3D);
+
+		return JsonObject;
+	}
+
+	FORCEINLINE static FTransform CreateTransformFromJson(const TSharedPtr<FJsonObject> JsonObject)
+	{
+		if (JsonObject->HasTypedField<EJson::Object>("Translation")
+			&& JsonObject->HasTypedField<EJson::Object>("Rotation")
+			&& JsonObject->HasTypedField<EJson::Object>("Scale3D")
+			)
+		{
+			return FTransform(
+				CreateQuatFromJson(JsonObject->GetObjectField("Rotation")),
+				CreateVector(JsonObject->GetObjectField("Translation")),
+				CreateVector(JsonObject->GetObjectField("Scale3D"))
+			);
+		}
+
+		return FTransform();
 	}
 };
