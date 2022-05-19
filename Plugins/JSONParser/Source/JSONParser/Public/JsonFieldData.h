@@ -243,7 +243,7 @@ public:
 	UJsonFieldData* RemoveKey(const FString& key);
 
 	/* Copy to another JSON */
-	UFUNCTION(meta = (DisplayName = "Copy"), Category = "JSON")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Copy"), Category = "JSON")
 	UJsonFieldData* Copy();
 
 	/* Creates new data from the input string */

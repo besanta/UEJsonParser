@@ -748,6 +748,13 @@ TArray<UClass*> UJsonFieldData::GetClassArray(const FString & key) const
 	return classArray;
 }
 
+/**
+* Tries to get a string from the field data by key to use it like a data64 image buffer, returns the Texture2D when successful
+*
+* @param	key			Key
+*
+* @return	The requested Texture2D, null if failed
+*/
 UTexture2D* UJsonFieldData::GetTexture(const FString& key) const
 {
 	FString Source;
@@ -755,11 +762,10 @@ UTexture2D* UJsonFieldData::GetTexture(const FString& key) const
 	FString Left, Right;
 
 	if (!Data->TryGetStringField(key, Source)) {
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Texture is missing!"), *key);
+		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type Texture2D is missing!"), *key);
 		return nullptr;
 	}
 	
-	// you need to remove Data:image....,
 	Source.Split(TEXT(","), &Left, &Right);
 	if (Right.IsEmpty()) {
 		return nullptr;
