@@ -54,6 +54,33 @@ public:
 };
 
 UCLASS() // Change the _API to match your project
+class UJSONAsyncAction_POSTHttpMessage : public UBlueprintAsyncActionBase
+{
+	GENERATED_BODY()
+
+protected:
+
+	void HandleRequestCompleted(FString ResponseString, bool bSuccess);
+
+public:
+
+	/** Execute the actual load */
+	virtual void Activate() override;
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Send JSON data with HTTP", BlueprintInternalUseOnly = "true", Category = "JSON", WorldContext = "WorldContextObject"))
+		static UJSONAsyncAction_POSTHttpMessage* AsyncRequestHTTP(UObject* WorldContextObject, FString URL, FString Verb, UJsonFieldData* Json, const TMap<FString, FString>& Header);
+
+	UPROPERTY(BlueprintAssignable)
+		FOnHttpRequestCompleted Completed;
+
+	/* URL to send GET request to */
+	FString URL;
+	FString Verb;
+	FString JSONContent;
+	TMap<FString, FString> Header;
+};
+
+UCLASS() // Change the _API to match your project
 class UJSONAsyncAction_RequestFile : public UBlueprintAsyncActionBase
 {
 	GENERATED_BODY()

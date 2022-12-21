@@ -1130,12 +1130,23 @@ FRotator UJsonFieldData::GetRotator(const FString & key) const
 */
 FLinearColor UJsonFieldData::GetColor(const FString & key) const
 {
-	const TSharedPtr<FJsonObject> *JsonObject;
-	if (!Data->TryGetObjectField(*key, JsonObject)) {
-		UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type LinearColor is missing !"), *key);
-		return FLinearColor();
+	if (Data->HasTypedField<EJson::Object>(key)) {
+		const TSharedPtr<FJsonObject>* JsonObject;
+		if (!Data->TryGetObjectField(*key, JsonObject)) {
+			UE_LOG(LogJson, Warning, TEXT("Entry '%s' of type LinearColor is missing !"), *key);
+				return FLinearColor();
+		}
+		return CreateColor(*JsonObject);
 	}
-	return CreateColor(*JsonObject);
+
+	if (Data->HasTypedField<EJson::String>(key)) {
+		FString StrColor;
+		if (Data->TryGetStringField(*key, StrColor)) {
+			const auto Color = FColor::FromHex(StrColor);
+			return FLinearColor(Color);
+		}
+	}
+	return FLinearColor();
 }
 
 TArray<FLinearColor> UJsonFieldData::GetColorArray(const FString & key) const
@@ -1424,7 +1435,8 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const FStructP
 		FProperty* Property = *It;
 
 		// This is the variable name if you need it
-		FString VariableName = Property->GetName();
+		//FString VariableName = Property->GetName(); 
+		FString VariableName = Property->GetAuthoredName();
 
 		// Never assume ArrayDim is always 1
 		for (int32 ArrayIndex = 0; ArrayIndex < Property->ArrayDim; ArrayIndex++)
@@ -1435,7 +1447,7 @@ TSharedPtr<FJsonObject> UJsonFieldData::CreateJsonValueFromStruct(const FStructP
 			// Parse this property
 			//ParseProperty(Property, ValuePtr);
 			//WritePropertyToJson(JsonStruct, Property->GetFName().ToString(), Property, ValuePtr);
-			JsonStruct->SetField(Property->GetFName().ToString(), GetJsonValue(Property, ValuePtr));
+			JsonStruct->SetField(VariableName, GetJsonValue(Property, ValuePtr));
 
 		}
 	}

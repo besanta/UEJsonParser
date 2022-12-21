@@ -76,7 +76,76 @@ UJSONAsyncAction_RequestHttpMessage* UJSONAsyncAction_RequestHttpMessage::AsyncR
 
 ////////////////////////
 
+void UJSONAsyncAction_POSTHttpMessage::Activate()
+{
+	// Create HTTP Request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+	HttpRequest->SetVerb(this->Verb);
+	HttpRequest->SetHeader("Content-Type", "application/json");
 
+	for (auto& k : this->Header) {
+		HttpRequest->SetHeader(k.Key, k.Value);
+	}
+	//HttpRequest->AppendToHeader("Content-Type", "application/json");
+
+
+	HttpRequest->SetContentAsString(this->JSONContent);
+	HttpRequest->SetURL(URL);
+
+	// Setup Async response
+	HttpRequest->OnProcessRequestComplete().BindLambda([this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+	{
+		FString ResponseString = "";
+		if (bSuccess)
+		{
+			ResponseString = Response->GetContentAsString();
+		}
+
+		this->HandleRequestCompleted(ResponseString, bSuccess);
+	});
+
+	// Handle actual request
+	HttpRequest->ProcessRequest();
+}
+
+
+void UJSONAsyncAction_POSTHttpMessage::HandleRequestCompleted(FString ResponseString, bool bSuccess)
+{
+	UJsonFieldData* JsonData = nullptr;
+	FString OutString;
+	if (bSuccess)
+	{
+		/* Deserialize object */
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(ResponseString);
+		FJsonSerializer::Deserialize(JsonReader, JsonObject);
+
+		if (RegisteredWithGameInstance.IsValid()) {
+			JsonData = UJsonFieldData::CreateFromJson(RegisteredWithGameInstance.Get(), JsonObject);
+		}
+	}
+
+	Completed.Broadcast(JsonData, bSuccess);
+}
+
+
+UJSONAsyncAction_POSTHttpMessage* UJSONAsyncAction_POSTHttpMessage::AsyncRequestHTTP(UObject* WorldContextObject, FString URL, FString Verb, UJsonFieldData* Json, const TMap<FString, FString>& Header)
+{
+	if (!Json) return NULL;
+	// Create Action Instance for Blueprint System
+	UJSONAsyncAction_POSTHttpMessage* Action = NewObject<UJSONAsyncAction_POSTHttpMessage>();
+	Action->URL = URL;
+	Action->Verb = Verb;
+	Action->JSONContent = Json->GetContentString();
+	Action->Header = Header;
+	Action->RegisterWithGameInstance(WorldContextObject);
+
+	return Action;
+}
+
+/// <summary>
+/// ////////////////
+/// </summary>
 void UJSONAsyncAction_RequestFile::Activate()
 {
 	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [this]()
