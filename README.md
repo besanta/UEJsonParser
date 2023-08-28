@@ -47,7 +47,7 @@ You can locate it in the extended option of your variable.\
 ![Alt savegame](Docs/savegamevariableproperty.png?raw=true "SaveGame")
 
 # Support
-nicosanta@brightnightgames.net
+nicolas@chimpslab.be
 
 # License
 This is an open source project, you can use it freely. 
