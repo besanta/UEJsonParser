@@ -103,3 +103,29 @@ public:
 	/* URL to send GET request to */
 	FString Filename;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWriteCompleted, bool, Success);
+UCLASS() // Change the _API to match your project
+class UJSONAsyncAction_SaveFile : public UBlueprintAsyncActionBase
+{
+	GENERATED_BODY()
+
+protected:
+
+	void HandleRequestCompleted(bool bSuccess);
+
+public:
+
+	/** Execute the actual load */
+	virtual void Activate() override;
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Save JSON Data to File", BlueprintInternalUseOnly = "true", Category = "JSON", WorldContext = "WorldContextObject"))
+		static UJSONAsyncAction_SaveFile* AsyncRequestFile(UObject* WorldContextObject, UJsonFieldData* Json, FString Filename);
+
+	UPROPERTY(BlueprintAssignable)
+		FOnWriteCompleted Completed;
+
+	FString Filename;
+	FString JSONContent;
+
+};

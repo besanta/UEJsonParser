@@ -9,3 +9,5 @@ Releases/
 *.dll
 UEJSONParser.VC.db
 UEJSONParser.VC.VC.opendb
+UEJSONParser.sln
+.vsconfig

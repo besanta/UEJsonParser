@@ -185,8 +185,46 @@ void UJSONAsyncAction_RequestFile::HandleRequestCompleted(FString ResponseString
 UJSONAsyncAction_RequestFile* UJSONAsyncAction_RequestFile::AsyncRequestFile(UObject* WorldContextObject, FString Filename)
 {
 	// Create Action Instance for Blueprint System
-	UJSONAsyncAction_RequestFile* Action = NewObject<UJSONAsyncAction_RequestFile>();
+	auto Action = NewObject<UJSONAsyncAction_RequestFile>();
 	Action->Filename = Filename;
+	Action->RegisterWithGameInstance(WorldContextObject);
+
+	return Action;
+}
+
+/// <summary>
+/// ////////////////
+/// </summary>
+void UJSONAsyncAction_SaveFile::Activate()
+{
+	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [this]()
+	{
+		auto Result = FFileHelper::SaveStringToFile(JSONContent, *Filename);
+		HandleRequestCompleted(Result);
+	});
+}
+
+void UJSONAsyncAction_SaveFile::HandleRequestCompleted(bool bSuccess)
+{
+	// credits : https://www.tomlooman.com/unreal-engine-async-blueprint-http-json/
+
+	UJsonFieldData* JsonData = nullptr;
+	FString OutString;
+
+	AsyncTask(ENamedThreads::GameThread, [this, bSuccess]()
+	{
+		Completed.Broadcast(bSuccess);
+		//SetReadyToDestroy();
+	});
+}
+
+
+UJSONAsyncAction_SaveFile* UJSONAsyncAction_SaveFile::AsyncRequestFile(UObject* WorldContextObject, UJsonFieldData* Json, FString Filename)
+{
+	// Create Action Instance for Blueprint System
+	auto* Action = NewObject<UJSONAsyncAction_SaveFile>();
+	Action->Filename = Filename;
+	Action->JSONContent = IsValid(Json) ? Json->GetPrettyString() : "{}";
 	Action->RegisterWithGameInstance(WorldContextObject);
 
 	return Action;

@@ -2,53 +2,62 @@
 
 Easy way to read, create and manipulate JSON in Blueprints.
 
-# Technical Details
+![Alt serialize](Docs/simple.png)
 
-* Handle JSON structured string
+# Short
+
 * Easy to use. No C++ coding required, everything can be managed via blueprints.
+* Import/Export JSON as files or with HTTP POST/GET operations.
+* Include C++ Source for C++ Projects.
+* Contains Unit Test and a sample project
+
+# Details
+
 * Supported Types: Bool, String, Name, Byte, Number(float), Vector, LinearColor, Rotator, Transform, Class and arrays of these types.
 * Encode anything with AddAnyField (LinearColor, SlateFont, Custom Blueprint Struct ... also works with UObject and every other Property type...). Only encode, no decoding.
 * Encode properties of your UObjects (With AddUObjectField) recursively if they are flagged with SaveGame. 
-* Compress JSON string (Archive). Read form archived JSON string.
-* Read From File (Async)
+* Compress/Decompress JSON string (Archive)
+* Save and Load JSON to/from File(Async).
 * GET from HTTP (Async)
+* POST from HTTP (Async)
 * Get Texture from Data64 string.
-* Include C++ Source for C++ Projects.
 
-# TODO
-* Save JSON to File.
+![unittest](Docs/unittest.png)
+
 
 # Documentation
-Simple example
-![Alt serialize](Docs/simple.png?raw=true "Serialize")
 
-## All Nodes
-* Save / Load
-![API LOAD](Docs/apiloadsave.png)
+## Installation
 
-* UObject
-![API UOBJ](Docs/apisetuobject.png)
-
-* Add
-![API ADD](Docs/apiadd.png)
-
-* Get
-![API GET](Docs/apiget.png)
+Copy the `Plugin` folder into your project.
 
 ## Sample
-* To serialize datas to JSON
-![Alt serialize](Docs/serialize.png?raw=true "Serialize")
 
-* To unserialize datas from JSON
-![unserialize](Docs/unserialize.png?raw=true "Unserialize")
+To serialize data to JSON
+![serialize](Docs/serialize.png)
 
-* To successfully use AddUObjectField on your UObjects, you have to flag the relevant variables with the SaveGameFlag. 
+To un-serialize data from JSON
+![un-serialize](Docs/unserialize.png)
+
+To successfully use AddUObjectField on your UObjects, you have to flag the relevant variables with the SaveGameFlag. 
 You can locate it in the extended option of your variable.\
-![Alt savegame](Docs/savegamevariableproperty.png?raw=true "SaveGame")
+![savegame](Docs/savegamevariableproperty.png)
+
+## All Nodes
+
+Save / Load
+![API LOAD](Docs/apiloadsave.png)
+
+
+Add and get operations (JSON base Types)
+![API ADD GET](Docs/apiaddget.png)
+Add and get operations (Unreal extended Types)
+![API ADD GET](Docs/apiaddgetue.png)
+
 
 # Support
-nicolas@chimpslab.be
+nicolas at chimpslab.be
 
 # License
 This is an open source project, you can use it freely. 
-If you think this project is useful, please give me a star if you like it.
+If you think this project is useful, please give it a star.
