@@ -1146,6 +1146,7 @@ FLinearColor UJsonFieldData::GetColor(const FString & key) const
 			return FLinearColor(Color);
 		}
 	}
+
 	return FLinearColor();
 }
 

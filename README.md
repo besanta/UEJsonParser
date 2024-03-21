@@ -21,8 +21,7 @@ Easy way to read, create and manipulate JSON in Blueprints.
 * GET from HTTP (Async)
 * POST from HTTP (Async)
 * Get Texture from Data64 string.
-
-![unittest](Docs/unittest.png)
+* Get Color from hex (e.g. `#FF0000`)
 
 
 # Documentation
@@ -33,14 +32,20 @@ Copy the `Plugin` folder into your project.
 
 ## Sample
 
-To serialize data to JSON
-![serialize](Docs/serialize.png)
+![samplesimple](Docs/samplesimple.png)
 
-To un-serialize data from JSON
+To get data from JSON
 ![un-serialize](Docs/unserialize.png)
 
-To successfully use AddUObjectField on your UObjects, you have to flag the relevant variables with the SaveGameFlag. 
-You can locate it in the extended option of your variable.\
+To format data as JSON
+![serialize](Docs/serialize.png)
+
+## UObject 
+
+Most of the objects in Unreal inherit from UObject, Actors, Components etc. You can use AddUObjectField on your UObjects to format their content as JSON.
+To enable some of the properties to be exported, you have to flag the relevant properties with the SaveGameFlag. 
+You can locate it in the extended option of your property.
+
 ![savegame](Docs/savegamevariableproperty.png)
 
 ## All Nodes
