@@ -54,6 +54,33 @@ public:
 };
 
 UCLASS() // Change the _API to match your project
+class UJSONAsyncAction_POSTHttpMessage : public UBlueprintAsyncActionBase
+{
+	GENERATED_BODY()
+
+protected:
+
+	void HandleRequestCompleted(FString ResponseString, bool bSuccess);
+
+public:
+
+	/** Execute the actual load */
+	virtual void Activate() override;
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Send JSON data with HTTP", BlueprintInternalUseOnly = "true", Category = "JSON", WorldContext = "WorldContextObject"))
+		static UJSONAsyncAction_POSTHttpMessage* AsyncRequestHTTP(UObject* WorldContextObject, FString URL, FString Verb, UJsonFieldData* Json, const TMap<FString, FString>& Header);
+
+	UPROPERTY(BlueprintAssignable)
+		FOnHttpRequestCompleted Completed;
+
+	/* URL to send GET request to */
+	FString URL;
+	FString Verb;
+	FString JSONContent;
+	TMap<FString, FString> Header;
+};
+
+UCLASS() // Change the _API to match your project
 class UJSONAsyncAction_RequestFile : public UBlueprintAsyncActionBase
 {
 	GENERATED_BODY()
@@ -75,4 +102,30 @@ public:
 
 	/* URL to send GET request to */
 	FString Filename;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWriteCompleted, bool, Success);
+UCLASS() // Change the _API to match your project
+class UJSONAsyncAction_SaveFile : public UBlueprintAsyncActionBase
+{
+	GENERATED_BODY()
+
+protected:
+
+	void HandleRequestCompleted(bool bSuccess);
+
+public:
+
+	/** Execute the actual load */
+	virtual void Activate() override;
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Save JSON Data to File", BlueprintInternalUseOnly = "true", Category = "JSON", WorldContext = "WorldContextObject"))
+		static UJSONAsyncAction_SaveFile* AsyncRequestFile(UObject* WorldContextObject, UJsonFieldData* Json, FString Filename);
+
+	UPROPERTY(BlueprintAssignable)
+		FOnWriteCompleted Completed;
+
+	FString Filename;
+	FString JSONContent;
+
 };
