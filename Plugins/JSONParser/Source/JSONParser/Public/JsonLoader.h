@@ -36,7 +36,7 @@ class UJSONAsyncAction_RequestHttpMessage : public UBlueprintAsyncActionBase
 
 protected:
 
-	void HandleRequestCompleted(FString ResponseString, bool bSuccess);
+	void HandleRequestCompleted(const FString& ResponseString, bool bSuccess);
 
 public:
 
@@ -60,7 +60,7 @@ class UJSONAsyncAction_POSTHttpMessage : public UBlueprintAsyncActionBase
 
 protected:
 
-	void HandleRequestCompleted(FString ResponseString, bool bSuccess);
+	void HandleRequestCompleted(const FString& ResponseString, bool bSuccess);
 
 public:
 
@@ -87,7 +87,7 @@ class UJSONAsyncAction_RequestFile : public UBlueprintAsyncActionBase
 
 protected:
 
-	void HandleRequestCompleted(FString ResponseString, bool bSuccess);
+	void HandleRequestCompleted(const FString& ResponseString, bool bSuccess);
 
 public:
 

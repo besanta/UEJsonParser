@@ -44,7 +44,7 @@ void UJSONAsyncAction_RequestHttpMessage::Activate()
 }
 
 
-void UJSONAsyncAction_RequestHttpMessage::HandleRequestCompleted(FString ResponseString, bool bSuccess)
+void UJSONAsyncAction_RequestHttpMessage::HandleRequestCompleted(const FString& ResponseString, bool bSuccess)
 {
 	UJsonFieldData* JsonData = nullptr;
 	FString OutString;
@@ -109,7 +109,7 @@ void UJSONAsyncAction_POSTHttpMessage::Activate()
 }
 
 
-void UJSONAsyncAction_POSTHttpMessage::HandleRequestCompleted(FString ResponseString, bool bSuccess)
+void UJSONAsyncAction_POSTHttpMessage::HandleRequestCompleted(const FString& ResponseString, bool bSuccess)
 {
 	UJsonFieldData* JsonData = nullptr;
 	FString OutString;
@@ -156,7 +156,7 @@ void UJSONAsyncAction_RequestFile::Activate()
 	});
 }
 
-void UJSONAsyncAction_RequestFile::HandleRequestCompleted(FString ResponseString, bool bSuccess)
+void UJSONAsyncAction_RequestFile::HandleRequestCompleted(const FString& ResponseString, bool bSuccess)
 {
 	// credits : https://www.tomlooman.com/unreal-engine-async-blueprint-http-json/
 	
