@@ -347,15 +347,15 @@ UJsonFieldData * UJsonFieldData::SetClassArray(const FString & key, const TArray
 		return this;
 	}
 
-	TArray<TSharedPtr<FJsonValue>> *classArray = new TArray<TSharedPtr<FJsonValue>>();
+	TArray<TSharedPtr<FJsonValue>> classArray;
 
 	// Loop through the array and create new shared FJsonValueObject instances for every FJsonObject
 	for (int32 i = 0; i < arrayData.Num(); i++) {
 		FString className = FStringClassReference(arrayData[i]).ToString();
-		classArray->Add(MakeShareable(new FJsonValueString(className)));
+		classArray.Add(MakeShareable(new FJsonValueString(className)));
 	}
 
-	Data->SetArrayField(*key, *classArray);
+	Data->SetArrayField(*key, classArray);
 	return this;
 }
 
@@ -372,14 +372,14 @@ UJsonFieldData* UJsonFieldData::SetObjectArray(const FString& key, const TArray<
 	if (!Data.IsValid() || key.IsEmpty()) {
 		return this;
 	}
-	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	TArray<TSharedPtr<FJsonValue>> dataArray;
 
 	// Loop through the array and create new shared FJsonValueObject instances for every FJsonObject
 	for (int32 i = 0; i < objectData.Num(); i++) {
-		dataArray->Add(MakeShareable(new FJsonValueObject(objectData[i]->Data)));
+		dataArray.Add(MakeShareable(new FJsonValueObject(objectData[i]->Data)));
 	}
 
-	Data->SetArrayField(*key, *dataArray);
+	Data->SetArrayField(*key, dataArray);
 	return this;
 }
 
@@ -398,14 +398,14 @@ UJsonFieldData* UJsonFieldData::SetStringArray(const FString& key, const TArray<
 		return this;
 	}
 
-	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	TArray<TSharedPtr<FJsonValue>> dataArray;
 
 	// Loop through the input array and add new shareable FJsonValueString instances to the data array
 	for (int32 i = 0; i < stringData.Num(); i++) {
-		dataArray->Add(MakeShareable(new FJsonValueString(stringData[i])));
+		dataArray.Add(MakeShareable(new FJsonValueString(stringData[i])));
 	}
 
-	Data->SetArrayField(*key, *dataArray);
+	Data->SetArrayField(*key, dataArray);
 	return this;
 }
 
@@ -440,14 +440,14 @@ UJsonFieldData * UJsonFieldData::SetNameArray(const FString & key, const TArray<
 	if (!Data.IsValid() || key.IsEmpty()) {
 		return this;
 	}
-	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	TArray<TSharedPtr<FJsonValue>> dataArray;
 
 	// Loop through the input array and add new shareable FJsonValueString instances to the data array
 	for (int32 i = 0; i < arrayData.Num(); i++) {
-		dataArray->Add(MakeShareable(new FJsonValueString(arrayData[i].ToString())));
+		dataArray.Add(MakeShareable(new FJsonValueString(arrayData[i].ToString())));
 	}
 
-	Data->SetArrayField(*key, *dataArray);
+	Data->SetArrayField(*key, dataArray);
 	return this;
 }
 
@@ -482,14 +482,14 @@ UJsonFieldData * UJsonFieldData::SetByteArray(const FString & key, const TArray<
 		return this;
 	}
 
-	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	TArray<TSharedPtr<FJsonValue>> dataArray;
 
 	// Loop through the input array and add new shareable FJsonValueString instances to the data array
 	for (int32 i = 0; i < arrayData.Num(); i++) {
-		dataArray->Add(MakeShareable(new FJsonValueNumber(arrayData[i])));
+		dataArray.Add(MakeShareable(new FJsonValueNumber(arrayData[i])));
 	}
 
-	Data->SetArrayField(*key, *dataArray);
+	Data->SetArrayField(*key, dataArray);
 	return this;
 }
 
@@ -564,14 +564,14 @@ UJsonFieldData * UJsonFieldData::SetNumberArray(const FString & key, const TArra
 	if (key.IsEmpty()) {
 		return this;
 	}
-	TArray<TSharedPtr<FJsonValue>> *dataArray = new TArray<TSharedPtr<FJsonValue>>();
+	TArray<TSharedPtr<FJsonValue>> dataArray;
 
 	// Loop through the input array and add new shareable FJsonValueString instances to the data array
 	for (int32 i = 0; i < arrayData.Num(); i++) {
-		dataArray->Add(MakeShareable(new FJsonValueNumber(arrayData[i])));
+		dataArray.Add(MakeShareable(new FJsonValueNumber(arrayData[i])));
 	}
 
-	Data->SetArrayField(*key, *dataArray);
+	Data->SetArrayField(*key, dataArray);
 	return this;
 }
 
